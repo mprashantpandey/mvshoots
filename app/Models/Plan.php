@@ -19,6 +19,7 @@ class Plan extends Model
     ];
 
     protected $casts = [
+        'category_id' => 'integer',
         'inclusions' => 'array',
         'price' => 'decimal:2',
     ];
