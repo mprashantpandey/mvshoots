@@ -10,8 +10,8 @@ class PlanResource extends JsonResource
     public function toArray(Request $request): array
     {
         return [
-            'id' => $this->id,
-            'category_id' => $this->category_id,
+            'id' => (int) $this->id,
+            'category_id' => $this->category_id === null ? null : (int) $this->category_id,
             'title' => $this->title,
             'description' => $this->description,
             'price' => (float) $this->price,

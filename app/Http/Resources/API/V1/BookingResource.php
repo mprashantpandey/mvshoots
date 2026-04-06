@@ -10,11 +10,11 @@ class BookingResource extends JsonResource
     public function toArray(Request $request): array
     {
         return [
-            'id' => $this->id,
-            'user_id' => $this->user_id,
-            'category_id' => $this->category_id,
-            'plan_id' => $this->plan_id,
-            'assigned_partner_id' => $this->assigned_partner_id,
+            'id' => (int) $this->id,
+            'user_id' => (int) $this->user_id,
+            'category_id' => (int) $this->category_id,
+            'plan_id' => (int) $this->plan_id,
+            'assigned_partner_id' => $this->assigned_partner_id === null ? null : (int) $this->assigned_partner_id,
             'booking_date' => $this->booking_date?->toDateString(),
             'booking_time' => $this->booking_time,
             'address' => $this->address,
