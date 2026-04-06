@@ -13,7 +13,7 @@ class SliderSeeder extends Seeder
             [
                 'title' => 'Capture your best moments',
                 'subtitle' => 'Book premium shoots in minutes.',
-                'image' => 'https://placehold.co/1200x720?text=MV+Shoots+User+1',
+                'image' => 'https://dummyimage.com/1200x720/e9eef8/1f3a5b.png&text=MV+Shoots+User+1',
                 'app_target' => 'user',
                 'sort_order' => 1,
                 'status' => 'active',
@@ -21,7 +21,7 @@ class SliderSeeder extends Seeder
             [
                 'title' => 'Trusted creatives for every event',
                 'subtitle' => 'Wedding, maternity, birthday and more.',
-                'image' => 'https://placehold.co/1200x720?text=MV+Shoots+User+2',
+                'image' => 'https://dummyimage.com/1200x720/f6efe7/7f5432.png&text=MV+Shoots+User+2',
                 'app_target' => 'both',
                 'sort_order' => 2,
                 'status' => 'active',

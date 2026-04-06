@@ -14,8 +14,8 @@ class ReelSeeder extends Seeder
         $birthday = Category::where('name', 'Birthday')->first();
 
         $reels = [
-            ['title' => 'Grand Wedding Highlights', 'video_url' => 'https://example.com/reels/wedding-highlights.mp4', 'thumbnail' => 'https://placehold.co/400x700?text=Wedding+Reel', 'category_id' => $wedding?->id],
-            ['title' => 'Birthday Moments Reel', 'video_url' => 'https://example.com/reels/birthday-moments.mp4', 'thumbnail' => 'https://placehold.co/400x700?text=Birthday+Reel', 'category_id' => $birthday?->id],
+            ['title' => 'Grand Wedding Highlights', 'video_url' => 'https://example.com/reels/wedding-highlights.mp4', 'thumbnail' => 'https://dummyimage.com/400x700/e9eef8/1f3a5b.png&text=Wedding+Reel', 'category_id' => $wedding?->id],
+            ['title' => 'Birthday Moments Reel', 'video_url' => 'https://example.com/reels/birthday-moments.mp4', 'thumbnail' => 'https://dummyimage.com/400x700/fff1e8/c96b36.png&text=Birthday+Reel', 'category_id' => $birthday?->id],
         ];
 
         foreach ($reels as $reel) {
