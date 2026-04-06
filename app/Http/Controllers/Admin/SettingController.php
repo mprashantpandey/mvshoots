@@ -15,9 +15,29 @@ class SettingController
         'app_name' => 'VM Shoot',
         'contact_email' => null,
         'contact_phone' => null,
+        'privacy_policy_title' => 'Privacy Policy',
+        'privacy_policy_content' => null,
+        'user_account_deletion_enabled' => '1',
+        'razorpay_enabled' => '0',
+        'razorpay_key_id' => null,
+        'razorpay_key_secret' => null,
+        'razorpay_webhook_secret' => null,
+        'razorpay_merchant_name' => 'MV Shoots',
+        'razorpay_logo_url' => null,
         'booking_advance_percentage' => '20',
         'global_maintenance_mode' => '0',
         'maintenance_message' => null,
+        'user_welcome_dialog_enabled' => '0',
+        'user_welcome_dialog_title' => null,
+        'user_welcome_dialog_message' => null,
+        'user_welcome_dialog_image_url' => null,
+        'user_welcome_dialog_primary_button_text' => 'Continue',
+        'user_welcome_dialog_primary_button_action_type' => 'dismiss',
+        'user_welcome_dialog_primary_button_action_value' => null,
+        'user_welcome_dialog_secondary_button_text' => null,
+        'user_welcome_dialog_secondary_button_action_type' => 'dismiss',
+        'user_welcome_dialog_secondary_button_action_value' => null,
+        'user_welcome_dialog_dismissible' => '1',
         'user_dialog_enabled' => '0',
         'user_dialog_title' => null,
         'user_dialog_message' => null,
@@ -95,6 +115,10 @@ class SettingController
         return Inertia::render('Admin/Settings/Edit', [
             'settings' => [
                 ...$settings,
+                'user_account_deletion_enabled' => filter_var($settings['user_account_deletion_enabled'], FILTER_VALIDATE_BOOL),
+                'razorpay_enabled' => filter_var($settings['razorpay_enabled'], FILTER_VALIDATE_BOOL),
+                'user_welcome_dialog_enabled' => filter_var($settings['user_welcome_dialog_enabled'], FILTER_VALIDATE_BOOL),
+                'user_welcome_dialog_dismissible' => filter_var($settings['user_welcome_dialog_dismissible'], FILTER_VALIDATE_BOOL),
                 'global_maintenance_mode' => filter_var($settings['global_maintenance_mode'], FILTER_VALIDATE_BOOL),
                 'user_dialog_enabled' => filter_var($settings['user_dialog_enabled'], FILTER_VALIDATE_BOOL),
                 'user_dialog_dismissible' => filter_var($settings['user_dialog_dismissible'], FILTER_VALIDATE_BOOL),
@@ -115,6 +139,10 @@ class SettingController
         $data = $request->validated();
         $logo = $this->mediaUploadService->upload($request->file('branding_logo'), 'settings');
         $data['branding_logo'] = $logo ?? Setting::value('branding_logo');
+        $data['user_account_deletion_enabled'] = (string) (int) $request->boolean('user_account_deletion_enabled');
+        $data['razorpay_enabled'] = (string) (int) $request->boolean('razorpay_enabled');
+        $data['user_welcome_dialog_enabled'] = (string) (int) $request->boolean('user_welcome_dialog_enabled');
+        $data['user_welcome_dialog_dismissible'] = (string) (int) $request->boolean('user_welcome_dialog_dismissible');
         $data['global_maintenance_mode'] = (string) (int) $request->boolean('global_maintenance_mode');
         $data['user_dialog_enabled'] = (string) (int) $request->boolean('user_dialog_enabled');
         $data['user_dialog_dismissible'] = (string) (int) $request->boolean('user_dialog_dismissible');

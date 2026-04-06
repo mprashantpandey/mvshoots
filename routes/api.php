@@ -10,6 +10,7 @@ use App\Http\Controllers\API\V1\PaymentController;
 use App\Http\Controllers\API\V1\PartnerController;
 use App\Http\Controllers\API\V1\PlanController;
 use App\Http\Controllers\API\V1\ReelController;
+use App\Http\Controllers\API\V1\SliderController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1')->group(function (): void {
@@ -24,6 +25,7 @@ Route::prefix('v1')->group(function (): void {
             Route::get('/me', [AuthController::class, 'me']);
             Route::get('/user/me', [AuthController::class, 'userProfile']);
             Route::put('/user/profile', [AuthController::class, 'updateUserProfile']);
+            Route::delete('/user/account', [AuthController::class, 'deleteUserAccount']);
             Route::get('/partner/me', [AuthController::class, 'partnerProfile']);
             Route::put('/partner/profile', [AuthController::class, 'updatePartnerProfile']);
             Route::post('/owner/logout', [AuthController::class, 'ownerLogout']);
@@ -37,6 +39,7 @@ Route::prefix('v1')->group(function (): void {
     Route::get('/plans/{plan}', [PlanController::class, 'show']);
     Route::get('/reels', [ReelController::class, 'index']);
     Route::get('/reels/{reel}', [ReelController::class, 'show']);
+    Route::get('/sliders', [SliderController::class, 'index']);
 
     Route::middleware('auth:sanctum')->group(function (): void {
         Route::get('/owner/dashboard', [OwnerDashboardController::class, 'show']);

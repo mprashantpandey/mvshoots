@@ -12,7 +12,7 @@ class User extends Authenticatable
     use HasApiTokens;
     use Notifiable;
 
-    protected $fillable = ['name', 'phone', 'email', 'firebase_uid', 'status'];
+    protected $fillable = ['name', 'phone', 'email', 'city', 'firebase_uid', 'status'];
 
     protected $hidden = ['remember_token'];
 

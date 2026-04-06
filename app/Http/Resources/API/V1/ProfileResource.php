@@ -13,6 +13,7 @@ class ProfileResource extends JsonResource
             'id' => $this->id,
             'name' => $this->name,
             'email' => $this->email,
+            'city' => $this->city ?? null,
             'phone' => $this->phone ?? null,
             'firebase_uid' => $this->firebase_uid ?? null,
             'status' => $this->status ?? null,

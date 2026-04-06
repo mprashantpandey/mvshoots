@@ -16,6 +16,7 @@ class DatabaseSeeder extends Seeder
             CategorySeeder::class,
             PlanSeeder::class,
             ReelSeeder::class,
+            SliderSeeder::class,
             BookingSeeder::class,
             NotificationSeeder::class,
             SettingSeeder::class,

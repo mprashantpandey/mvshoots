@@ -21,6 +21,7 @@ class AppConfigController extends Controller
         $appKey = "{$data['app']}_app";
         $mobileConfig = config("platform.mobile.{$appKey}", []);
         $dialogConfig = $mobileConfig['custom_dialog'] ?? [];
+        $welcomeDialogConfig = $mobileConfig['welcome_dialog'] ?? [];
 
         return $this->success([
             'app_name' => config('app.name'),
@@ -30,6 +31,22 @@ class AppConfigController extends Controller
             ],
             'booking' => [
                 'advance_percentage' => config('platform.mobile.booking_advance_percentage', 20),
+            ],
+            'privacy_policy' => [
+                'title' => config('platform.mobile.privacy_policy.title', 'Privacy Policy'),
+                'content' => config('platform.mobile.privacy_policy.content'),
+            ],
+            'account' => [
+                'deletion_enabled' => config('platform.mobile.user_account_deletion_enabled', true),
+            ],
+            'payment_gateway' => [
+                'provider' => config('platform.mobile.payment_gateway.provider', 'stub'),
+                'razorpay' => [
+                    'enabled' => config('platform.mobile.payment_gateway.razorpay.enabled', false),
+                    'key_id' => config('platform.mobile.payment_gateway.razorpay.key_id'),
+                    'merchant_name' => config('platform.mobile.payment_gateway.razorpay.merchant_name'),
+                    'logo_url' => config('platform.mobile.payment_gateway.razorpay.logo_url'),
+                ],
             ],
             'maintenance' => [
                 'enabled' => config('platform.mobile.global_maintenance_mode', false),
@@ -55,6 +72,23 @@ class AppConfigController extends Controller
                     'text' => ($dialogConfig['enabled'] ?? false) ? ($dialogConfig['secondary_button']['text'] ?? null) : null,
                     'action_type' => ($dialogConfig['enabled'] ?? false) ? ($dialogConfig['secondary_button']['action_type'] ?? null) : null,
                     'action_value' => ($dialogConfig['enabled'] ?? false) ? ($dialogConfig['secondary_button']['action_value'] ?? null) : null,
+                ],
+            ],
+            'welcome_dialog' => [
+                'enabled' => $welcomeDialogConfig['enabled'] ?? false,
+                'dismissible' => $welcomeDialogConfig['dismissible'] ?? true,
+                'title' => ($welcomeDialogConfig['enabled'] ?? false) ? ($welcomeDialogConfig['title'] ?? null) : null,
+                'message' => ($welcomeDialogConfig['enabled'] ?? false) ? ($welcomeDialogConfig['message'] ?? null) : null,
+                'image_url' => ($welcomeDialogConfig['enabled'] ?? false) ? ($welcomeDialogConfig['image_url'] ?? null) : null,
+                'primary_button' => [
+                    'text' => ($welcomeDialogConfig['enabled'] ?? false) ? ($welcomeDialogConfig['primary_button']['text'] ?? 'Continue') : null,
+                    'action_type' => ($welcomeDialogConfig['enabled'] ?? false) ? ($welcomeDialogConfig['primary_button']['action_type'] ?? 'dismiss') : null,
+                    'action_value' => ($welcomeDialogConfig['enabled'] ?? false) ? ($welcomeDialogConfig['primary_button']['action_value'] ?? null) : null,
+                ],
+                'secondary_button' => [
+                    'text' => ($welcomeDialogConfig['enabled'] ?? false) ? ($welcomeDialogConfig['secondary_button']['text'] ?? null) : null,
+                    'action_type' => ($welcomeDialogConfig['enabled'] ?? false) ? ($welcomeDialogConfig['secondary_button']['action_type'] ?? null) : null,
+                    'action_value' => ($welcomeDialogConfig['enabled'] ?? false) ? ($welcomeDialogConfig['secondary_button']['action_value'] ?? null) : null,
                 ],
             ],
             'firebase' => [

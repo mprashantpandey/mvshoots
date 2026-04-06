@@ -133,4 +133,9 @@ class PaymentService
             return $payment;
         });
     }
+
+    public function verifyGatewayPayment(array $payload): bool
+    {
+        return $this->paymentGateway->verifyPayment($payload);
+    }
 }

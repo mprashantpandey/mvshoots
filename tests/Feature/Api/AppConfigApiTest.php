@@ -16,9 +16,23 @@ class AppConfigApiTest extends TestCase
             'app_name' => 'VM Shoot Pro',
             'contact_phone' => '9876543210',
             'contact_email' => 'hello@vmshoot.test',
+            'privacy_policy_title' => 'Privacy & Data',
+            'privacy_policy_content' => 'We only use your data to manage bookings.',
+            'user_account_deletion_enabled' => '1',
+            'razorpay_enabled' => '1',
+            'razorpay_key_id' => 'rzp_test_123',
+            'razorpay_key_secret' => 'secret_123',
+            'razorpay_merchant_name' => 'MV Shoots',
+            'razorpay_logo_url' => 'https://example.com/logo.png',
             'booking_advance_percentage' => '25',
             'global_maintenance_mode' => '1',
             'maintenance_message' => 'Platform maintenance in progress.',
+            'user_welcome_dialog_enabled' => '1',
+            'user_welcome_dialog_title' => 'Welcome back',
+            'user_welcome_dialog_message' => 'Your next shoot is a tap away.',
+            'user_welcome_dialog_primary_button_text' => 'Browse',
+            'user_welcome_dialog_primary_button_action_type' => 'route',
+            'user_welcome_dialog_primary_button_action_value' => '/categories',
             'user_dialog_enabled' => '1',
             'user_dialog_title' => 'User update',
             'user_dialog_message' => 'This appears only in the user app.',
@@ -62,10 +76,19 @@ class AppConfigApiTest extends TestCase
             ->assertJsonPath('data.app_name', 'VM Shoot Pro')
             ->assertJsonPath('data.contact.phone', '9876543210')
             ->assertJsonPath('data.contact.email', 'noreply@vmshoot.test')
+            ->assertJsonPath('data.privacy_policy.title', 'Privacy & Data')
+            ->assertJsonPath('data.privacy_policy.content', 'We only use your data to manage bookings.')
+            ->assertJsonPath('data.account.deletion_enabled', true)
+            ->assertJsonPath('data.payment_gateway.provider', 'razorpay')
+            ->assertJsonPath('data.payment_gateway.razorpay.enabled', true)
+            ->assertJsonPath('data.payment_gateway.razorpay.key_id', 'rzp_test_123')
             ->assertJsonPath('data.booking.advance_percentage', 25)
             ->assertJsonPath('data.maintenance.enabled', true)
             ->assertJsonPath('data.versioning.latest_version', '1.2.0')
             ->assertJsonPath('data.versioning.force_update', true)
+            ->assertJsonPath('data.welcome_dialog.enabled', true)
+            ->assertJsonPath('data.welcome_dialog.title', 'Welcome back')
+            ->assertJsonPath('data.welcome_dialog.primary_button.action_value', '/categories')
             ->assertJsonPath('data.custom_dialog.enabled', true)
             ->assertJsonPath('data.custom_dialog.title', 'User update')
             ->assertJsonPath('data.custom_dialog.dismissible', false)

@@ -1,0 +1,38 @@
+<?php
+
+namespace Database\Seeders;
+
+use App\Models\Slider;
+use Illuminate\Database\Seeder;
+
+class SliderSeeder extends Seeder
+{
+    public function run(): void
+    {
+        $sliders = [
+            [
+                'title' => 'Capture your best moments',
+                'subtitle' => 'Book premium shoots in minutes.',
+                'image' => 'https://placehold.co/1200x720?text=MV+Shoots+User+1',
+                'app_target' => 'user',
+                'sort_order' => 1,
+                'status' => 'active',
+            ],
+            [
+                'title' => 'Trusted creatives for every event',
+                'subtitle' => 'Wedding, maternity, birthday and more.',
+                'image' => 'https://placehold.co/1200x720?text=MV+Shoots+User+2',
+                'app_target' => 'both',
+                'sort_order' => 2,
+                'status' => 'active',
+            ],
+        ];
+
+        foreach ($sliders as $slider) {
+            Slider::updateOrCreate(
+                ['title' => $slider['title'], 'app_target' => $slider['app_target']],
+                $slider
+            );
+        }
+    }
+}

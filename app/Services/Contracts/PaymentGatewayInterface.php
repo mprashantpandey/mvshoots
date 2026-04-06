@@ -7,4 +7,6 @@ use App\Models\Booking;
 interface PaymentGatewayInterface
 {
     public function createOrder(Booking $booking, string $paymentType, float $amount): array;
+
+    public function verifyPayment(array $payload): bool;
 }

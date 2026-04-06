@@ -19,4 +19,9 @@ class StubPaymentGateway implements PaymentGatewayInterface
             'order_id' => 'stub_' . Str::uuid(),
         ];
     }
+
+    public function verifyPayment(array $payload): bool
+    {
+        return true;
+    }
 }

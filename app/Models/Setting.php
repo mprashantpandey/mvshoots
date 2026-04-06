@@ -15,6 +15,8 @@ class Setting extends Model
         'firebase_app_id',
         'firebase_service_account_json',
         'firebase_web_push_key',
+        'razorpay_key_secret',
+        'razorpay_webhook_secret',
     ];
 
     public static function value(string $key, mixed $default = null): mixed

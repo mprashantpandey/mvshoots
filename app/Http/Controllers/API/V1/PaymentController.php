@@ -70,11 +70,16 @@ class PaymentController extends Controller
         $data = $request->validate([
             'booking_id' => ['required', 'exists:bookings,id'],
             'payment_reference' => ['nullable', 'string', 'max:255'],
+            'gateway_order_id' => ['nullable', 'string', 'max:255'],
+            'gateway_payment_id' => ['nullable', 'string', 'max:255'],
+            'gateway_signature' => ['nullable', 'string', 'max:255'],
         ]);
 
         $booking = Booking::findOrFail($data['booking_id']);
 
         abort_unless((int) $booking->user_id === (int) $actor->id, 403, 'You can only pay for your own bookings.');
+
+        $this->assertValidGatewayPayload($data);
 
         $payment = $this->paymentService->recordAdvancePayment($data['booking_id'], $data['payment_reference'] ?? null);
 
@@ -90,11 +95,16 @@ class PaymentController extends Controller
         $data = $request->validate([
             'booking_id' => ['required', 'exists:bookings,id'],
             'payment_reference' => ['nullable', 'string', 'max:255'],
+            'gateway_order_id' => ['nullable', 'string', 'max:255'],
+            'gateway_payment_id' => ['nullable', 'string', 'max:255'],
+            'gateway_signature' => ['nullable', 'string', 'max:255'],
         ]);
 
         $booking = Booking::findOrFail($data['booking_id']);
 
         abort_unless((int) $booking->user_id === (int) $actor->id, 403, 'You can only pay for your own bookings.');
+
+        $this->assertValidGatewayPayload($data);
 
         $payment = $this->paymentService->recordFinalPayment($data['booking_id'], $data['payment_reference'] ?? null);
 
@@ -114,5 +124,22 @@ class PaymentController extends Controller
         $payments = $booking->payments()->latest()->get();
 
         return $this->success(PaymentResource::collection($payments), 'Payments fetched');
+    }
+
+    private function assertValidGatewayPayload(array $data): void
+    {
+        $hasGatewayPayload = filled($data['gateway_order_id'] ?? null)
+            || filled($data['gateway_payment_id'] ?? null)
+            || filled($data['gateway_signature'] ?? null);
+
+        if (! $hasGatewayPayload) {
+            return;
+        }
+
+        abort_unless(
+            $this->paymentService->verifyGatewayPayment($data),
+            422,
+            'Payment verification failed.'
+        );
     }
 }

@@ -5,6 +5,8 @@ namespace App\Http\Controllers\API\V1;
 use App\Http\Controllers\API\V1\Concerns\ApiResponse;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\API\V1\ProfileResource;
+use App\Models\AppNotification;
+use App\Models\DeviceToken;
 use App\Models\Owner;
 use App\Models\Partner;
 use App\Models\User;
@@ -20,20 +22,54 @@ class AuthController extends Controller
     public function syncUser(Request $request): JsonResponse
     {
         $data = $request->validate([
-            'name' => ['required', 'string', 'max:255'],
             'phone' => ['required', 'string', 'max:20'],
+            'name' => ['nullable', 'string', 'max:255'],
             'email' => ['nullable', 'email'],
+            'city' => ['nullable', 'string', 'max:255'],
             'firebase_uid' => ['nullable', 'string', 'max:255'],
         ]);
 
-        $user = User::updateOrCreate(
-            ['phone' => $data['phone']],
-            $data
-        );
+        $user = User::where('phone', $data['phone'])->first();
+
+        if ($user) {
+            $user->fill(array_filter([
+                'firebase_uid' => $data['firebase_uid'] ?? null,
+                'email' => $data['email'] ?? null,
+            ], fn ($value) => filled($value)))->save();
+
+            return $this->success([
+                'token' => $this->issueToken($user->fresh(), 'user-app'),
+                'user' => new ProfileResource($user->fresh()),
+                'is_new' => false,
+                'requires_registration' => false,
+            ], 'User logged in');
+        }
+
+        if (blank($data['name'] ?? null) || blank($data['city'] ?? null)) {
+            return $this->success([
+                'token' => null,
+                'user' => null,
+                'is_new' => true,
+                'requires_registration' => true,
+                'phone' => $data['phone'],
+                'firebase_uid' => $data['firebase_uid'] ?? null,
+            ], 'User registration required');
+        }
+
+        $user = User::create([
+            'name' => $data['name'],
+            'phone' => $data['phone'],
+            'email' => $data['email'] ?? null,
+            'city' => $data['city'],
+            'firebase_uid' => $data['firebase_uid'] ?? null,
+            'status' => 'active',
+        ]);
 
         return $this->success([
             'token' => $this->issueToken($user, 'user-app'),
             'user' => new ProfileResource($user),
+            'is_new' => true,
+            'requires_registration' => false,
         ], 'User profile synced');
     }
 
@@ -140,11 +176,34 @@ class AuthController extends Controller
         $data = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'email' => ['nullable', 'email'],
+            'city' => ['nullable', 'string', 'max:255'],
         ]);
 
         $actor->update($data);
 
         return $this->success(new ProfileResource($actor->fresh()), 'User profile updated');
+    }
+
+    public function deleteUserAccount(Request $request): JsonResponse
+    {
+        $actor = $request->user('sanctum');
+
+        abort_unless($actor instanceof User, 403, 'Only users can delete this account.');
+
+        DeviceToken::query()
+            ->where('user_type', 'user')
+            ->where('user_id', $actor->id)
+            ->delete();
+
+        AppNotification::query()
+            ->where('user_type', 'user')
+            ->where('user_id', $actor->id)
+            ->delete();
+
+        $actor->tokens()->delete();
+        $actor->delete();
+
+        return $this->success(null, 'User account deleted');
     }
 
     public function updatePartnerProfile(Request $request): JsonResponse

@@ -25,6 +25,7 @@ const links = [
     { href: '/admin/categories', label: 'Categories', icon: 'bi-collection' },
     { href: '/admin/plans', label: 'Plans', icon: 'bi-card-checklist' },
     { href: '/admin/reels', label: 'Reels', icon: 'bi-play-btn' },
+    { href: '/admin/sliders', label: 'Sliders', icon: 'bi-images' },
     { href: '/admin/bookings', label: 'Bookings', icon: 'bi-calendar2-check' },
     { href: '/admin/booking-results', label: 'Results', icon: 'bi-images' },
     { href: '/admin/payments', label: 'Payments', icon: 'bi-credit-card-2-front' },

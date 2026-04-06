@@ -5,6 +5,8 @@ namespace Tests\Feature\Api;
 use App\Models\Owner;
 use App\Models\Partner;
 use App\Models\User;
+use App\Models\DeviceToken;
+use App\Models\AppNotification;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -16,6 +18,7 @@ class AuthApiTest extends TestCase
     {
         $response = $this->postJson('/api/v1/auth/user/sync', [
             'name' => 'Test User',
+            'city' => 'Hyderabad',
             'phone' => '+911234567890',
             'email' => 'user@example.com',
             'firebase_uid' => 'firebase-user-1',
@@ -27,9 +30,24 @@ class AuthApiTest extends TestCase
             ->assertJsonStructure([
                 'data' => [
                     'token',
-                    'user' => ['id', 'name', 'phone', 'email', 'firebase_uid'],
+                    'user' => ['id', 'name', 'phone', 'email', 'city', 'firebase_uid'],
                 ],
             ]);
+    }
+
+    public function test_user_sync_requires_registration_when_phone_is_new_and_profile_is_incomplete(): void
+    {
+        $response = $this->postJson('/api/v1/auth/user/sync', [
+            'phone' => '+919123456789',
+            'firebase_uid' => 'firebase-user-2',
+        ]);
+
+        $response
+            ->assertOk()
+            ->assertJsonPath('data.requires_registration', true)
+            ->assertJsonPath('data.is_new', true)
+            ->assertJsonPath('data.token', null)
+            ->assertJsonPath('data.user', null);
     }
 
     public function test_partner_sync_returns_a_sanctum_token(): void
@@ -58,6 +76,7 @@ class AuthApiTest extends TestCase
             'name' => 'Profile User',
             'phone' => '+919999999999',
             'email' => 'profile.user@example.com',
+            'city' => 'Bengaluru',
             'firebase_uid' => 'firebase-profile-user',
             'status' => 'active',
         ]);
@@ -88,9 +107,11 @@ class AuthApiTest extends TestCase
             ->putJson('/api/v1/auth/user/profile', [
                 'name' => 'Updated User',
                 'email' => 'updated.user@example.com',
+                'city' => 'Mumbai',
             ])
             ->assertOk()
-            ->assertJsonPath('data.name', 'Updated User');
+            ->assertJsonPath('data.name', 'Updated User')
+            ->assertJsonPath('data.city', 'Mumbai');
 
         $this->app['auth']->forgetGuards();
         $this->withToken($partner->createToken('partner-profile')->plainTextToken)
@@ -106,5 +127,42 @@ class AuthApiTest extends TestCase
             ])
             ->assertOk()
             ->assertJsonPath('data.name', 'Updated Owner');
+    }
+
+    public function test_authenticated_user_can_delete_account(): void
+    {
+        $user = User::create([
+            'name' => 'Delete Me',
+            'phone' => '+911111111111',
+            'email' => 'delete@example.com',
+            'city' => 'Pune',
+            'firebase_uid' => 'firebase-delete-user',
+            'status' => 'active',
+        ]);
+
+        DeviceToken::create([
+            'user_type' => 'user',
+            'user_id' => $user->id,
+            'device_token' => 'token-123',
+            'platform' => 'android',
+        ]);
+
+        AppNotification::create([
+            'user_type' => 'user',
+            'user_id' => $user->id,
+            'title' => 'Hello',
+            'body' => 'Body',
+            'type' => 'booking_created',
+            'is_read' => false,
+        ]);
+
+        $this->withToken($user->createToken('delete-user')->plainTextToken)
+            ->deleteJson('/api/v1/auth/user/account')
+            ->assertOk()
+            ->assertJsonPath('success', true);
+
+        $this->assertDatabaseMissing('users', ['id' => $user->id]);
+        $this->assertDatabaseMissing('device_tokens', ['user_id' => $user->id, 'user_type' => 'user']);
+        $this->assertDatabaseMissing('notifications', ['user_id' => $user->id, 'user_type' => 'user']);
     }
 }

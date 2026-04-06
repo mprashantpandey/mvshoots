@@ -11,6 +11,7 @@ const tabs = [
     { key: 'general', label: 'General' },
     { key: 'dialogs', label: 'Dialogs' },
     { key: 'mobile', label: 'Mobile Apps' },
+    { key: 'payments', label: 'Payments' },
     { key: 'mail', label: 'Email / SMTP' },
     { key: 'firebase', label: 'Firebase' },
 ];
@@ -21,9 +22,23 @@ const form = useForm({
     app_name: props.settings?.app_name ?? '',
     contact_email: props.settings?.contact_email ?? '',
     contact_phone: props.settings?.contact_phone ?? '',
+    privacy_policy_title: props.settings?.privacy_policy_title ?? 'Privacy Policy',
+    privacy_policy_content: props.settings?.privacy_policy_content ?? '',
+    user_account_deletion_enabled: props.settings?.user_account_deletion_enabled ?? true,
     booking_advance_percentage: props.settings?.booking_advance_percentage ?? '20',
     global_maintenance_mode: props.settings?.global_maintenance_mode ?? false,
     maintenance_message: props.settings?.maintenance_message ?? '',
+    user_welcome_dialog_enabled: props.settings?.user_welcome_dialog_enabled ?? false,
+    user_welcome_dialog_title: props.settings?.user_welcome_dialog_title ?? '',
+    user_welcome_dialog_message: props.settings?.user_welcome_dialog_message ?? '',
+    user_welcome_dialog_image_url: props.settings?.user_welcome_dialog_image_url ?? '',
+    user_welcome_dialog_primary_button_text: props.settings?.user_welcome_dialog_primary_button_text ?? 'Continue',
+    user_welcome_dialog_primary_button_action_type: props.settings?.user_welcome_dialog_primary_button_action_type ?? 'dismiss',
+    user_welcome_dialog_primary_button_action_value: props.settings?.user_welcome_dialog_primary_button_action_value ?? '',
+    user_welcome_dialog_secondary_button_text: props.settings?.user_welcome_dialog_secondary_button_text ?? '',
+    user_welcome_dialog_secondary_button_action_type: props.settings?.user_welcome_dialog_secondary_button_action_type ?? 'dismiss',
+    user_welcome_dialog_secondary_button_action_value: props.settings?.user_welcome_dialog_secondary_button_action_value ?? '',
+    user_welcome_dialog_dismissible: props.settings?.user_welcome_dialog_dismissible ?? true,
     user_dialog_enabled: props.settings?.user_dialog_enabled ?? false,
     user_dialog_title: props.settings?.user_dialog_title ?? '',
     user_dialog_message: props.settings?.user_dialog_message ?? '',
@@ -66,6 +81,12 @@ const form = useForm({
     owner_android_latest_version: props.settings?.owner_android_latest_version ?? '',
     owner_android_force_update: props.settings?.owner_android_force_update ?? false,
     owner_android_store_url: props.settings?.owner_android_store_url ?? '',
+    razorpay_enabled: props.settings?.razorpay_enabled ?? false,
+    razorpay_key_id: props.settings?.razorpay_key_id ?? '',
+    razorpay_key_secret: props.settings?.razorpay_key_secret ?? '',
+    razorpay_webhook_secret: props.settings?.razorpay_webhook_secret ?? '',
+    razorpay_merchant_name: props.settings?.razorpay_merchant_name ?? 'MV Shoots',
+    razorpay_logo_url: props.settings?.razorpay_logo_url ?? '',
     mail_mailer: props.settings?.mail_mailer ?? 'log',
     mail_host: props.settings?.mail_host ?? '',
     mail_port: props.settings?.mail_port ?? '2525',
@@ -139,6 +160,16 @@ const activeTabLabel = computed(() => tabs.find((tab) => tab.key === activeTab.v
                         <label class="form-label">Contact Phone</label>
                         <input v-model="form.contact_phone" class="form-control">
                     </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Privacy Policy Title</label>
+                        <input v-model="form.privacy_policy_title" class="form-control">
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-check mt-4 pt-2">
+                            <input id="user_account_deletion_enabled" v-model="form.user_account_deletion_enabled" class="form-check-input" type="checkbox">
+                            <label class="form-check-label" for="user_account_deletion_enabled">Allow users to delete their account from the app</label>
+                        </div>
+                    </div>
                     <div class="col-md-4">
                         <label class="form-label">Advance Payment Percentage</label>
                         <input v-model="form.booking_advance_percentage" class="form-control" type="number" min="1" max="100">
@@ -153,6 +184,10 @@ const activeTabLabel = computed(() => tabs.find((tab) => tab.key === activeTab.v
                             <label class="form-check-label" for="global_maintenance_mode">Enable global maintenance mode</label>
                         </div>
                     </div>
+                    <div class="col-12">
+                        <label class="form-label">Privacy Policy Content</label>
+                        <textarea v-model="form.privacy_policy_content" class="form-control" rows="8" placeholder="Explain how user data is collected and used."></textarea>
+                    </div>
                     <div v-if="settings.branding_logo" class="col-12">
                         <div class="small text-secondary mb-2">Current logo</div>
                         <img :src="settings.branding_logo" alt="Brand logo" class="rounded-4 object-fit-contain border bg-white p-3" style="max-height: 120px;">
@@ -163,6 +198,58 @@ const activeTabLabel = computed(() => tabs.find((tab) => tab.key === activeTab.v
                     <div class="col-12">
                         <div class="text-secondary">
                             Configure a separate dialog box for each app. Each one is fetched independently by the mobile apps.
+                        </div>
+                    </div>
+
+                    <div class="col-12">
+                        <div class="glass-card p-4">
+                            <div class="d-flex justify-content-between align-items-center flex-wrap gap-3 mb-3">
+                                <div class="fw-semibold">User Welcome Dialog</div>
+                                <div class="form-check">
+                                    <input id="user_welcome_dialog_enabled" v-model="form.user_welcome_dialog_enabled" class="form-check-input" type="checkbox">
+                                    <label class="form-check-label" for="user_welcome_dialog_enabled">Enable</label>
+                                </div>
+                            </div>
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <label class="form-label">Title</label>
+                                    <input v-model="form.user_welcome_dialog_title" class="form-control" placeholder="Welcome to MV Shoots">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Image URL</label>
+                                    <input v-model="form.user_welcome_dialog_image_url" class="form-control" placeholder="https://...">
+                                </div>
+                                <div class="col-12">
+                                    <label class="form-label">Message</label>
+                                    <textarea v-model="form.user_welcome_dialog_message" class="form-control" rows="3" placeholder="Shown after user login."></textarea>
+                                </div>
+                                <div class="col-12">
+                                    <div class="form-check">
+                                        <input id="user_welcome_dialog_dismissible" v-model="form.user_welcome_dialog_dismissible" class="form-check-input" type="checkbox">
+                                        <label class="form-check-label" for="user_welcome_dialog_dismissible">Dismissible</label>
+                                    </div>
+                                </div>
+                                <div class="col-lg-6">
+                                    <div class="border rounded-4 p-3 h-100">
+                                        <div class="fw-medium mb-3">Primary Button</div>
+                                        <div class="row g-3">
+                                            <div class="col-md-6"><label class="form-label">Text</label><input v-model="form.user_welcome_dialog_primary_button_text" class="form-control" placeholder="Continue"></div>
+                                            <div class="col-md-6"><label class="form-label">Action Type</label><select v-model="form.user_welcome_dialog_primary_button_action_type" class="form-select"><option value="dismiss">Dismiss</option><option value="route">Open App Route</option><option value="url">Open URL</option><option value="none">No Action</option></select></div>
+                                            <div class="col-12"><label class="form-label">Action Value</label><input v-model="form.user_welcome_dialog_primary_button_action_value" class="form-control" placeholder="/categories or https://example.com"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-lg-6">
+                                    <div class="border rounded-4 p-3 h-100">
+                                        <div class="fw-medium mb-3">Secondary Button</div>
+                                        <div class="row g-3">
+                                            <div class="col-md-6"><label class="form-label">Text</label><input v-model="form.user_welcome_dialog_secondary_button_text" class="form-control" placeholder="Later"></div>
+                                            <div class="col-md-6"><label class="form-label">Action Type</label><select v-model="form.user_welcome_dialog_secondary_button_action_type" class="form-select"><option value="dismiss">Dismiss</option><option value="route">Open App Route</option><option value="url">Open URL</option><option value="none">No Action</option></select></div>
+                                            <div class="col-12"><label class="form-label">Action Value</label><input v-model="form.user_welcome_dialog_secondary_button_action_value" class="form-control" placeholder="/profile or https://example.com"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
 
@@ -338,6 +425,27 @@ const activeTabLabel = computed(() => tabs.find((tab) => tab.key === activeTab.v
                     <div class="col-md-4"><label class="form-label">Latest Android Version</label><input v-model="form.owner_android_latest_version" class="form-control"></div>
                     <div class="col-md-8"><label class="form-label">App Download URL</label><input v-model="form.owner_android_store_url" class="form-control"></div>
                     <div class="col-12"><div class="form-check"><input id="owner_android_force_update" v-model="form.owner_android_force_update" class="form-check-input" type="checkbox"><label class="form-check-label" for="owner_android_force_update">Force update for Owner App</label></div></div>
+                </div>
+
+                <div v-show="activeTab === 'payments'" class="row g-4">
+                    <div class="col-12">
+                        <div class="glass-card p-4">
+                            <div class="d-flex justify-content-between align-items-center flex-wrap gap-3 mb-3">
+                                <div class="fw-semibold">Razorpay</div>
+                                <div class="form-check">
+                                    <input id="razorpay_enabled" v-model="form.razorpay_enabled" class="form-check-input" type="checkbox">
+                                    <label class="form-check-label" for="razorpay_enabled">Enable Razorpay checkout</label>
+                                </div>
+                            </div>
+                            <div class="row g-3">
+                                <div class="col-md-6"><label class="form-label">Key ID</label><input v-model="form.razorpay_key_id" class="form-control" placeholder="rzp_live_xxxxx"></div>
+                                <div class="col-md-6"><label class="form-label">Key Secret</label><input v-model="form.razorpay_key_secret" class="form-control" type="password" placeholder="••••••••"></div>
+                                <div class="col-md-6"><label class="form-label">Merchant Name</label><input v-model="form.razorpay_merchant_name" class="form-control" placeholder="MV Shoots"></div>
+                                <div class="col-md-6"><label class="form-label">Logo URL</label><input v-model="form.razorpay_logo_url" class="form-control" placeholder="https://..."></div>
+                                <div class="col-12"><label class="form-label">Webhook Secret</label><input v-model="form.razorpay_webhook_secret" class="form-control" type="password" placeholder="Optional for later webhook validation"></div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
                 <div v-show="activeTab === 'mail'" class="row g-4">

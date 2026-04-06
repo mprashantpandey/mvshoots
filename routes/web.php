@@ -14,6 +14,7 @@ use App\Http\Controllers\Admin\PlanController;
 use App\Http\Controllers\Admin\ReelController;
 use App\Http\Controllers\Admin\ReportController;
 use App\Http\Controllers\Admin\SettingController;
+use App\Http\Controllers\Admin\SliderController;
 use App\Http\Controllers\Admin\UserController;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
@@ -43,6 +44,7 @@ Route::prefix('admin')->name('admin.')->middleware('auth:admin')->group(function
     Route::resource('categories', CategoryController::class);
     Route::resource('plans', PlanController::class);
     Route::resource('reels', ReelController::class);
+    Route::resource('sliders', SliderController::class)->except(['show']);
     Route::resource('partners', PartnerController::class);
     Route::resource('owners', OwnerController::class);
     Route::post('/partners/{partner}/status', [PartnerController::class, 'updateStatus'])->name('partners.update-status');
