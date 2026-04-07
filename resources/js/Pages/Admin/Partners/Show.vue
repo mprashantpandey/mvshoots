@@ -8,7 +8,9 @@ const props = defineProps({
 });
 
 function headline(value) {
-    return value.replaceAll('_', ' ').replace(/\b\w/g, (letter) => letter.toUpperCase());
+    const safeValue = String(value ?? 'file');
+
+    return safeValue.replaceAll('_', ' ').replace(/\b\w/g, (letter) => letter.toUpperCase());
 }
 
 function toggleStatus() {
@@ -65,7 +67,16 @@ function toggleStatus() {
                         <div v-for="result in partner.booking_results" :key="result.id" class="border rounded-4 p-3 mb-3">
                             <div class="fw-semibold">{{ headline(result.file_type) }}</div>
                             <div class="small text-secondary mb-2">{{ result.notes || 'No notes' }}</div>
-                            <a :href="result.file_url" target="_blank" rel="noreferrer" class="small text-decoration-none">View file</a>
+                            <a
+                                v-if="result.file_url"
+                                :href="result.file_url"
+                                target="_blank"
+                                rel="noreferrer"
+                                class="small text-decoration-none"
+                            >
+                                View file
+                            </a>
+                            <div v-else class="small text-secondary">File unavailable</div>
                         </div>
                         <div v-if="!partner.booking_results?.length" class="text-secondary">No result uploads yet.</div>
                     </div>
