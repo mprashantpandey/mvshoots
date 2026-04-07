@@ -22,6 +22,7 @@ const currentUrl = computed(() => page.url);
 
 const links = [
     { href: '/admin/dashboard', label: 'Dashboard', icon: 'bi-grid' },
+    { href: '/admin/cities', label: 'Cities', icon: 'bi-geo-alt' },
     { href: '/admin/categories', label: 'Categories', icon: 'bi-collection' },
     { href: '/admin/plans', label: 'Plans', icon: 'bi-card-checklist' },
     { href: '/admin/reels', label: 'Reels', icon: 'bi-play-btn' },

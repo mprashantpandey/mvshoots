@@ -7,6 +7,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Resources\API\V1\ProfileResource;
 use App\Models\Admin;
 use App\Models\AppNotification;
+use App\Models\City;
 use App\Models\DeviceToken;
 use App\Models\Owner;
 use App\Models\Partner;
@@ -28,8 +29,11 @@ class AuthController extends Controller
             'name' => ['nullable', 'string', 'max:255'],
             'email' => ['nullable', 'email'],
             'city' => ['nullable', 'string', 'max:255'],
+            'city_id' => ['nullable', 'exists:cities,id'],
             'firebase_uid' => ['nullable', 'string', 'max:255'],
         ]);
+
+        $resolvedCity = $this->resolveCityPayload($data);
 
         $user = User::where('phone', $data['phone'])->first();
 
@@ -37,17 +41,19 @@ class AuthController extends Controller
             $user->fill(array_filter([
                 'firebase_uid' => $data['firebase_uid'] ?? null,
                 'email' => $data['email'] ?? null,
+                'city' => $resolvedCity['name'] ?? null,
+                'city_id' => $resolvedCity['id'] ?? null,
             ], fn ($value) => filled($value)))->save();
 
             return $this->success([
                 'token' => $this->issueToken($user->fresh(), 'user-app'),
-                'user' => new ProfileResource($user->fresh()),
+                'user' => new ProfileResource($user->fresh()->load('managedCity')),
                 'is_new' => false,
                 'requires_registration' => false,
             ], 'User logged in');
         }
 
-        if (blank($data['name'] ?? null) || blank($data['city'] ?? null)) {
+        if (blank($data['name'] ?? null) || blank($resolvedCity['name'] ?? ($data['city'] ?? null))) {
             return $this->success([
                 'token' => null,
                 'user' => null,
@@ -62,14 +68,15 @@ class AuthController extends Controller
             'name' => $data['name'],
             'phone' => $data['phone'],
             'email' => $data['email'] ?? null,
-            'city' => $data['city'],
+            'city' => $resolvedCity['name'] ?? $data['city'],
+            'city_id' => $resolvedCity['id'] ?? null,
             'firebase_uid' => $data['firebase_uid'] ?? null,
             'status' => 'active',
         ]);
 
         return $this->success([
             'token' => $this->issueToken($user, 'user-app'),
-            'user' => new ProfileResource($user),
+            'user' => new ProfileResource($user->load('managedCity')),
             'is_new' => true,
             'requires_registration' => false,
         ], 'User profile synced');
@@ -223,11 +230,19 @@ class AuthController extends Controller
             'name' => ['required', 'string', 'max:255'],
             'email' => ['nullable', 'email'],
             'city' => ['nullable', 'string', 'max:255'],
+            'city_id' => ['nullable', 'exists:cities,id'],
         ]);
 
-        $actor->update($data);
+        $resolvedCity = $this->resolveCityPayload($data);
 
-        return $this->success(new ProfileResource($actor->fresh()), 'User profile updated');
+        $actor->update([
+            'name' => $data['name'],
+            'email' => $data['email'] ?? null,
+            'city' => $resolvedCity['name'] ?? $data['city'] ?? null,
+            'city_id' => $resolvedCity['id'] ?? null,
+        ]);
+
+        return $this->success(new ProfileResource($actor->fresh()->load('managedCity')), 'User profile updated');
     }
 
     public function deleteUserAccount(Request $request): JsonResponse
@@ -359,5 +374,29 @@ class AuthController extends Controller
         $authenticatable->tokens()->delete();
 
         return $authenticatable->createToken($tokenName)->plainTextToken;
+    }
+
+    private function resolveCityPayload(array $data): array
+    {
+        if (! empty($data['city_id'])) {
+            $city = City::find($data['city_id']);
+
+            return [
+                'id' => $city?->id,
+                'name' => $city?->name,
+            ];
+        }
+
+        $cityName = trim((string) ($data['city'] ?? ''));
+        if ($cityName === '') {
+            return ['id' => null, 'name' => null];
+        }
+
+        $city = City::query()->whereRaw('LOWER(name) = ?', [mb_strtolower($cityName)])->first();
+
+        return [
+            'id' => $city?->id,
+            'name' => $city?->name ?? $cityName,
+        ];
     }
 }

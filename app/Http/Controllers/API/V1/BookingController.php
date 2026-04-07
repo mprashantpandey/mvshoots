@@ -8,6 +8,7 @@ use App\Http\Resources\API\V1\BookingResource;
 use App\Http\Resources\API\V1\BookingResultResource;
 use App\Models\Admin;
 use App\Models\Booking;
+use App\Models\Plan;
 use App\Models\Owner;
 use App\Models\Partner;
 use App\Models\User;
@@ -34,8 +35,8 @@ class BookingController extends Controller
         $actor = $this->requireActor($request, [User::class, Partner::class, Owner::class, Admin::class]);
 
         $query = Booking::query()
-            ->with(['user', 'category', 'plan', 'assignedPartner', 'payments', 'results'])
-            ->filter($request->only(['booking_id', 'status', 'date', 'category_id', 'plan_id', 'partner_id', 'payment_status', 'user']))
+            ->with(['user.managedCity', 'city', 'category', 'plan', 'assignedPartner', 'payments', 'results'])
+            ->filter($request->only(['booking_id', 'status', 'date', 'category_id', 'plan_id', 'partner_id', 'payment_status', 'user', 'city_id']))
             ->latest();
 
         if ($actor instanceof User) {
@@ -64,12 +65,23 @@ class BookingController extends Controller
             'notes' => ['nullable', 'string'],
         ]);
 
+        $plan = Plan::query()
+            ->with('cities')
+            ->where('id', $data['plan_id'])
+            ->where('category_id', $data['category_id'])
+            ->firstOrFail();
+
+        if ($actor->city_id && $plan->cities()->exists() && ! $plan->cities->contains('id', $actor->city_id)) {
+            abort(422, 'This service is not available in your selected city.');
+        }
+
         $booking = $this->bookingService->create([
             ...$data,
             'user_id' => $actor->id,
+            'city_id' => $actor->city_id,
         ]);
 
-        return $this->success(new BookingResource($booking->load(['user', 'plan', 'category'])), 'Booking created', 201);
+        return $this->success(new BookingResource($booking->load(['user.managedCity', 'city', 'plan', 'category'])), 'Booking created', 201);
     }
 
     public function show(Request $request, Booking $booking): JsonResponse
@@ -78,7 +90,7 @@ class BookingController extends Controller
 
         $this->authorizeBookingAccess($booking, $actor);
 
-        $booking->load(['user', 'category', 'plan', 'assignedPartner', 'statusLogs', 'payments', 'results']);
+        $booking->load(['user.managedCity', 'city', 'category', 'plan', 'assignedPartner', 'statusLogs', 'payments', 'results']);
 
         return $this->success(new BookingResource($booking), 'Booking fetched');
     }

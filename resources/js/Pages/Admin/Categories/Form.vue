@@ -16,6 +16,10 @@ const props = defineProps({
         type: String,
         required: true,
     },
+    cities: {
+        type: Array,
+        default: () => [],
+    },
 });
 
 const form = useForm({
@@ -23,6 +27,7 @@ const form = useForm({
     description: props.category?.description ?? '',
     status: props.category?.status ?? 'active',
     image: null,
+    city_ids: props.category?.city_ids ?? [],
     _method: props.method === 'put' ? 'put' : 'post',
 });
 
@@ -54,6 +59,13 @@ function submit() {
                             <option value="active">Active</option>
                             <option value="inactive">Inactive</option>
                         </select>
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label">Available In Cities</label>
+                        <select v-model="form.city_ids" class="form-select" multiple size="6">
+                            <option v-for="city in cities" :key="city.id" :value="city.id">{{ city.name }}</option>
+                        </select>
+                        <div class="form-text">Leave empty to make this category available in all cities.</div>
                     </div>
                     <div class="col-12">
                         <label class="form-label">Description</label>

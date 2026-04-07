@@ -60,6 +60,7 @@ function destroyPlan(plan) {
                         <tr>
                             <th>Title</th>
                             <th>Category</th>
+                            <th>Cities</th>
                             <th>Price</th>
                             <th>Duration</th>
                             <th>Status</th>
@@ -70,6 +71,7 @@ function destroyPlan(plan) {
                         <tr v-for="plan in plans.data" :key="plan.id">
                             <td class="fw-semibold">{{ plan.title }}</td>
                             <td class="text-secondary">{{ plan.category_name || 'Unassigned' }}</td>
+                            <td class="text-secondary">{{ plan.cities?.length ? plan.cities.join(', ') : 'All cities' }}</td>
                             <td>₹{{ plan.price }}</td>
                             <td>{{ plan.duration }}</td>
                             <td><StatusBadge :value="plan.status" /></td>
@@ -80,7 +82,7 @@ function destroyPlan(plan) {
                             </td>
                         </tr>
                         <tr v-if="!plans.data.length">
-                            <td colspan="6" class="text-center py-5 text-secondary">No plans found.</td>
+                            <td colspan="7" class="text-center py-5 text-secondary">No plans found.</td>
                         </tr>
                     </tbody>
                 </table>

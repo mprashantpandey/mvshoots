@@ -16,6 +16,7 @@ class BookingResource extends JsonResource
         return [
             'id' => (int) $this->id,
             'user_id' => (int) $this->user_id,
+            'city_id' => $this->city_id === null ? null : (int) $this->city_id,
             'category_id' => (int) $this->category_id,
             'plan_id' => (int) $this->plan_id,
             'assigned_partner_id' => $this->assigned_partner_id === null ? null : (int) $this->assigned_partner_id,
@@ -31,6 +32,7 @@ class BookingResource extends JsonResource
             'final_paid' => (bool) $this->final_paid,
             'results_count' => (int) $this->results()->count(),
             'user' => new ProfileResource($this->whenLoaded('user')),
+            'city' => new CityResource($this->whenLoaded('city')),
             'category' => new CategoryResource($this->whenLoaded('category')),
             'plan' => new PlanResource($this->whenLoaded('plan')),
             'assigned_partner' => new ProfileResource($this->whenLoaded('assignedPartner')),

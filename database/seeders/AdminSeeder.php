@@ -11,7 +11,7 @@ class AdminSeeder extends Seeder
     public function run(): void
     {
         Admin::updateOrCreate(
-            ['email' => 'admin@vmshoot.test'],
+            ['email' => 'admin@mvshoots.com'],
             [
                 'name' => 'Platform Admin',
                 'password' => Hash::make('password'),

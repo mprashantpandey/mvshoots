@@ -21,6 +21,8 @@ class PlanRequest extends FormRequest
             'duration' => ['required', 'string', 'max:255'],
             'inclusions' => ['nullable', 'string'],
             'status' => ['required', 'in:active,inactive'],
+            'city_ids' => ['nullable', 'array'],
+            'city_ids.*' => ['integer', 'exists:cities,id'],
         ];
     }
 }

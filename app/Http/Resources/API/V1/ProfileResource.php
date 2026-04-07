@@ -9,11 +9,17 @@ class ProfileResource extends JsonResource
 {
     public function toArray(Request $request): array
     {
+        $managedCity = method_exists($this->resource, 'managedCity') && $this->resource->relationLoaded('managedCity')
+            ? $this->resource->managedCity
+            : null;
+
         return [
             'id' => $this->id,
             'name' => $this->name,
             'email' => $this->email,
-            'city' => $this->city ?? null,
+            'city' => $managedCity?->name ?? $this->city ?? null,
+            'city_id' => $this->city_id === null ? null : (int) $this->city_id,
+            'managed_city' => $this->city_id && $managedCity ? new CityResource($managedCity) : null,
             'phone' => $this->phone ?? null,
             'firebase_uid' => $this->firebase_uid ?? null,
             'status' => $this->status ?? null,

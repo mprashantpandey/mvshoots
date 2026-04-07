@@ -9,7 +9,7 @@ const props = defineProps({
 
 const tabs = [
     { key: 'general', label: 'General' },
-    { key: 'dialogs', label: 'Dialogs' },
+    { key: 'dialogs', label: 'Popups' },
     { key: 'mobile', label: 'Mobile Apps' },
     { key: 'payments', label: 'Payments' },
     { key: 'mail', label: 'Email / SMTP' },
@@ -197,14 +197,22 @@ const activeTabLabel = computed(() => tabs.find((tab) => tab.key === activeTab.v
                 <div v-show="activeTab === 'dialogs'" class="row g-4">
                     <div class="col-12">
                         <div class="text-secondary">
-                            Configure a separate dialog box for each app. Each one is fetched independently by the mobile apps.
+                            Manage one-time welcome popups separately from regular in-app popups.
                         </div>
+                    </div>
+
+                    <div class="col-12">
+                        <div class="small text-uppercase fw-semibold text-secondary mb-1">Welcome Popup</div>
+                        <div class="text-secondary">Shown once after user login.</div>
                     </div>
 
                     <div class="col-12">
                         <div class="glass-card p-4">
                             <div class="d-flex justify-content-between align-items-center flex-wrap gap-3 mb-3">
-                                <div class="fw-semibold">User Welcome Dialog</div>
+                                <div>
+                                    <div class="fw-semibold">User Welcome Popup</div>
+                                    <div class="small text-secondary">For first login or first app entry after sign in.</div>
+                                </div>
                                 <div class="form-check">
                                     <input id="user_welcome_dialog_enabled" v-model="form.user_welcome_dialog_enabled" class="form-check-input" type="checkbox">
                                     <label class="form-check-label" for="user_welcome_dialog_enabled">Enable</label>
@@ -254,9 +262,17 @@ const activeTabLabel = computed(() => tabs.find((tab) => tab.key === activeTab.v
                     </div>
 
                     <div class="col-12">
+                        <div class="small text-uppercase fw-semibold text-secondary mb-1">In-App Popups</div>
+                        <div class="text-secondary">Regular app-wide popups controlled separately for each app.</div>
+                    </div>
+
+                    <div class="col-12">
                         <div class="glass-card p-4">
                             <div class="d-flex justify-content-between align-items-center flex-wrap gap-3 mb-3">
-                                <div class="fw-semibold">User App Dialog</div>
+                                <div>
+                                    <div class="fw-semibold">User App Popup</div>
+                                    <div class="small text-secondary">General popup for the user app, not the welcome popup.</div>
+                                </div>
                                 <div class="form-check">
                                     <input id="user_dialog_enabled" v-model="form.user_dialog_enabled" class="form-check-input" type="checkbox">
                                     <label class="form-check-label" for="user_dialog_enabled">Enable</label>
@@ -308,7 +324,10 @@ const activeTabLabel = computed(() => tabs.find((tab) => tab.key === activeTab.v
                     <div class="col-12">
                         <div class="glass-card p-4">
                             <div class="d-flex justify-content-between align-items-center flex-wrap gap-3 mb-3">
-                                <div class="fw-semibold">Partner App Dialog</div>
+                                <div>
+                                    <div class="fw-semibold">Partner App Popup</div>
+                                    <div class="small text-secondary">General popup shown inside the partner app.</div>
+                                </div>
                                 <div class="form-check">
                                     <input id="partner_dialog_enabled" v-model="form.partner_dialog_enabled" class="form-check-input" type="checkbox">
                                     <label class="form-check-label" for="partner_dialog_enabled">Enable</label>
@@ -360,7 +379,10 @@ const activeTabLabel = computed(() => tabs.find((tab) => tab.key === activeTab.v
                     <div class="col-12">
                         <div class="glass-card p-4">
                             <div class="d-flex justify-content-between align-items-center flex-wrap gap-3 mb-3">
-                                <div class="fw-semibold">Owner App Dialog</div>
+                                <div>
+                                    <div class="fw-semibold">Owner App Popup</div>
+                                    <div class="small text-secondary">General popup shown inside the owner app.</div>
+                                </div>
                                 <div class="form-check">
                                     <input id="owner_dialog_enabled" v-model="form.owner_dialog_enabled" class="form-check-input" type="checkbox">
                                     <label class="form-check-label" for="owner_dialog_enabled">Enable</label>

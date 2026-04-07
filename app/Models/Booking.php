@@ -11,6 +11,7 @@ class Booking extends Model
 {
     protected $fillable = [
         'user_id',
+        'city_id',
         'category_id',
         'plan_id',
         'assigned_partner_id',
@@ -28,6 +29,7 @@ class Booking extends Model
 
     protected $casts = [
         'booking_date' => 'date',
+        'city_id' => 'integer',
         'advance_paid' => 'boolean',
         'final_paid' => 'boolean',
         'advance_amount' => 'decimal:2',
@@ -47,6 +49,11 @@ class Booking extends Model
     public function category(): BelongsTo
     {
         return $this->belongsTo(Category::class);
+    }
+
+    public function city(): BelongsTo
+    {
+        return $this->belongsTo(City::class);
     }
 
     public function plan(): BelongsTo
@@ -88,6 +95,7 @@ class Booking extends Model
             ->when($filters['category_id'] ?? null, fn ($builder, $categoryId) => $builder->where('category_id', $categoryId))
             ->when($filters['plan_id'] ?? null, fn ($builder, $planId) => $builder->where('plan_id', $planId))
             ->when($filters['partner_id'] ?? null, fn ($builder, $partnerId) => $builder->where('assigned_partner_id', $partnerId))
+            ->when($filters['city_id'] ?? null, fn ($builder, $cityId) => $builder->where('city_id', $cityId))
             ->when($filters['payment_status'] ?? null, function ($builder, $paymentStatus): void {
                 $builder->whereHas('payments', fn ($paymentQuery) => $paymentQuery->where('payment_status', $paymentStatus));
             })

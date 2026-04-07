@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Requests\Admin\PlanRequest;
 use App\Models\Category;
+use App\Models\City;
 use App\Models\Plan;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -14,7 +15,7 @@ class PlanController
 {
     public function index(Request $request): Response
     {
-        $plans = Plan::with('category')
+        $plans = Plan::with(['category', 'cities'])
             ->when($request->string('search')->value(), function ($query, $search): void {
                 $query->where('title', 'like', "%{$search}%");
             })
@@ -41,6 +42,7 @@ class PlanController
                     'id' => $category->id,
                     'name' => $category->name,
                 ]),
+            'cities' => $this->cityOptions(),
             'submitUrl' => route('admin.plans.store'),
             'method' => 'post',
         ]);
@@ -51,15 +53,18 @@ class PlanController
         $data = $request->validated();
 
         $data['inclusions'] = array_filter(array_map('trim', explode("\n", $data['inclusions'] ?? '')));
+        $cityIds = $data['city_ids'] ?? [];
+        unset($data['city_ids']);
 
-        Plan::create($data);
+        $plan = Plan::create($data);
+        $plan->cities()->sync($cityIds);
 
         return redirect()->route('admin.plans.index')->with('status', 'Plan created.');
     }
 
     public function show(Plan $plan): Response
     {
-        $plan->load('category');
+        $plan->load(['category', 'cities']);
 
         return Inertia::render('Admin/Plans/Show', [
             'plan' => $this->transformPlan($plan, true),
@@ -68,7 +73,7 @@ class PlanController
 
     public function edit(Plan $plan): Response
     {
-        $plan->load('category');
+        $plan->load(['category', 'cities']);
 
         return Inertia::render('Admin/Plans/Form', [
             'plan' => $this->transformPlan($plan, true),
@@ -78,6 +83,7 @@ class PlanController
                     'id' => $category->id,
                     'name' => $category->name,
                 ]),
+            'cities' => $this->cityOptions(),
             'submitUrl' => route('admin.plans.update', $plan),
             'method' => 'put',
         ]);
@@ -88,14 +94,18 @@ class PlanController
         $data = $request->validated();
 
         $data['inclusions'] = array_filter(array_map('trim', explode("\n", $data['inclusions'] ?? '')));
+        $cityIds = $data['city_ids'] ?? [];
+        unset($data['city_ids']);
 
         $plan->update($data);
+        $plan->cities()->sync($cityIds);
 
         return redirect()->route('admin.plans.index')->with('status', 'Plan updated.');
     }
 
     public function destroy(Plan $plan): RedirectResponse
     {
+        $plan->cities()->detach();
         $plan->delete();
 
         return redirect()->route('admin.plans.index')->with('status', 'Plan deleted.');
@@ -112,6 +122,8 @@ class PlanController
             'price' => (string) $plan->price,
             'duration' => $plan->duration,
             'status' => $plan->status,
+            'city_ids' => $plan->relationLoaded('cities') ? $plan->cities->pluck('id')->all() : [],
+            'cities' => $plan->relationLoaded('cities') ? $plan->cities->pluck('name')->values()->all() : [],
             'created_at' => optional($plan->created_at)?->toDateTimeString(),
             'show_url' => route('admin.plans.show', $plan),
             'edit_url' => route('admin.plans.edit', $plan),
@@ -123,5 +135,19 @@ class PlanController
         }
 
         return $payload;
+    }
+
+    private function cityOptions(): array
+    {
+        return City::query()
+            ->where('status', 'active')
+            ->orderBy('sort_order')
+            ->orderBy('name')
+            ->get(['id', 'name'])
+            ->map(fn (City $city) => [
+                'id' => $city->id,
+                'name' => $city->name,
+            ])
+            ->all();
     }
 }

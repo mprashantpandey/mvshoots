@@ -60,6 +60,7 @@ function destroyCategory(category) {
                         <tr>
                             <th>Image</th>
                             <th>Name</th>
+                            <th>Cities</th>
                             <th>Description</th>
                             <th>Status</th>
                             <th class="text-end">Actions</th>
@@ -79,6 +80,7 @@ function destroyCategory(category) {
                                 <div v-else class="avatar-circle">{{ category.name.slice(0, 1).toUpperCase() }}</div>
                             </td>
                             <td class="fw-semibold">{{ category.name }}</td>
+                            <td class="text-secondary">{{ category.cities?.length ? category.cities.join(', ') : 'All cities' }}</td>
                             <td class="text-secondary">{{ category.description || 'No description added.' }}</td>
                             <td><StatusBadge :value="category.status" /></td>
                             <td class="text-end">
@@ -88,7 +90,7 @@ function destroyCategory(category) {
                             </td>
                         </tr>
                         <tr v-if="!categories.data.length">
-                            <td colspan="5" class="text-center py-5 text-secondary">No categories found.</td>
+                            <td colspan="6" class="text-center py-5 text-secondary">No categories found.</td>
                         </tr>
                     </tbody>
                 </table>

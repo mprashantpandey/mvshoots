@@ -4,6 +4,7 @@ use App\Http\Controllers\API\V1\AuthController;
 use App\Http\Controllers\API\V1\AppConfigController;
 use App\Http\Controllers\API\V1\BookingController;
 use App\Http\Controllers\API\V1\CategoryController;
+use App\Http\Controllers\API\V1\CityController;
 use App\Http\Controllers\API\V1\NotificationController;
 use App\Http\Controllers\API\V1\OwnerDashboardController;
 use App\Http\Controllers\API\V1\PaymentController;
@@ -15,6 +16,7 @@ use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1')->group(function (): void {
     Route::get('/app-config', [AppConfigController::class, 'show']);
+    Route::get('/cities', [CityController::class, 'index']);
 
     Route::prefix('auth')->group(function (): void {
         Route::post('/user/sync', [AuthController::class, 'syncUser']);

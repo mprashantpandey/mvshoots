@@ -4,6 +4,7 @@ namespace Tests\Feature\Admin;
 
 use App\Models\Admin;
 use App\Models\Category;
+use App\Models\City;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
@@ -25,11 +26,18 @@ class CategoryCrudTest extends TestCase
 
         $this->actingAs($admin, 'admin');
 
+        $city = City::create([
+            'name' => 'Mumbai',
+            'status' => 'active',
+            'sort_order' => 1,
+        ]);
+
         $createResponse = $this->post(route('admin.categories.store'), [
             'name' => 'Wedding',
             'description' => 'Wedding and engagement shoots',
             'status' => 'active',
             'image' => UploadedFile::fake()->image('wedding.jpg'),
+            'city_ids' => [$city->id],
         ]);
 
         $createResponse->assertRedirect(route('admin.categories.index'));
@@ -39,12 +47,14 @@ class CategoryCrudTest extends TestCase
         $this->assertSame('Wedding', $category->name);
         $this->assertSame('active', $category->status);
         $this->assertNotNull($category->image);
+        $this->assertSame([$city->id], $category->cities()->pluck('cities.id')->all());
         Storage::disk('public')->assertExists($category->image);
 
         $updateResponse = $this->put(route('admin.categories.update', $category), [
             'name' => 'Wedding Premium',
             'description' => 'Luxury wedding shoots',
             'status' => 'inactive',
+            'city_ids' => [],
         ]);
 
         $updateResponse->assertRedirect(route('admin.categories.index'));

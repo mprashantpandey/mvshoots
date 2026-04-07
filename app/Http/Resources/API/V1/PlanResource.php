@@ -19,6 +19,8 @@ class PlanResource extends JsonResource
             'inclusions' => $this->inclusions ?? [],
             'status' => $this->status,
             'category' => new CategoryResource($this->whenLoaded('category')),
+            'city_ids' => $this->whenLoaded('cities', fn () => $this->cities->pluck('id')->map(fn ($id) => (int) $id)->values()->all()),
+            'cities' => CityResource::collection($this->whenLoaded('cities')),
             'created_at' => $this->created_at?->toISOString(),
             'updated_at' => $this->updated_at?->toISOString(),
         ];

@@ -30,6 +30,10 @@ defineProps({
                 <div class="col-lg-8">
                     <div class="text-secondary">Description</div>
                     <p class="mb-0">{{ category.description || 'No description added.' }}</p>
+                    <div class="text-secondary mt-4">Cities</div>
+                    <p class="mb-0">
+                        {{ category.cities?.length ? category.cities.join(', ') : 'All cities' }}
+                    </p>
                 </div>
             </div>
         </div>

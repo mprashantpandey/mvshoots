@@ -40,6 +40,10 @@ defineProps({
                     <div class="fw-semibold">{{ plan.category_name || 'Unassigned' }}</div>
                 </div>
                 <div class="col-12">
+                    <div class="text-secondary">Cities</div>
+                    <p class="mb-0">{{ plan.cities?.length ? plan.cities.join(', ') : 'All cities' }}</p>
+                </div>
+                <div class="col-12">
                     <div class="text-secondary">Description</div>
                     <p class="mb-0">{{ plan.description || 'No description added.' }}</p>
                 </div>

@@ -15,6 +15,8 @@ class CategoryResource extends JsonResource
             'description' => $this->description,
             'image' => $this->resolveMediaUrl($this->image),
             'status' => $this->status,
+            'city_ids' => $this->whenLoaded('cities', fn () => $this->cities->pluck('id')->map(fn ($id) => (int) $id)->values()->all()),
+            'cities' => CityResource::collection($this->whenLoaded('cities')),
             'plans_count' => $this->whenCounted('plans', fn () => (int) $this->plans_count),
             'reels_count' => $this->whenCounted('reels', fn () => (int) $this->reels_count),
             'created_at' => $this->created_at?->toISOString(),
