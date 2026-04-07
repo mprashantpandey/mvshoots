@@ -77,9 +77,9 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-    <AdminLayout title="Dashboard">
+    <AdminLayout title="Dashboard" subtitle="Customer journey &amp; business health at a glance">
         <div class="row g-4 mb-4">
-            <div class="col-6 col-xl-3"><StatCard label="Total Users" :value="props.totalUsers" icon="bi-people" /></div>
+            <div class="col-6 col-xl-3"><StatCard label="Customers (users)" :value="props.totalUsers" icon="bi-people" /></div>
             <div class="col-6 col-xl-3"><StatCard label="Total Partners" :value="props.totalPartners" icon="bi-camera-reels" /></div>
             <div class="col-6 col-xl-3"><StatCard label="Total Bookings" :value="props.totalBookings" icon="bi-calendar2-check" /></div>
             <div class="col-6 col-xl-3"><StatCard label="Revenue" :value="`₹${Number(props.totalRevenue ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`" icon="bi-cash-stack" /></div>
@@ -119,15 +119,15 @@ onBeforeUnmount(() => {
         <div class="row g-4 mb-4">
             <div class="col-md-4"><StatCard label="Pending Bookings" :value="props.pendingBookings" icon="bi-clock-history" /></div>
             <div class="col-md-4"><StatCard label="Completed Bookings" :value="props.completedBookings" icon="bi-patch-check" /></div>
-            <div class="col-md-4"><StatCard label="Platform Health" value="Stable" hint="Core operations are connected" icon="bi-activity" /></div>
+            <div class="col-md-4"><StatCard label="Service status" value="Operational" hint="APIs and payouts connected" icon="bi-activity" /></div>
         </div>
 
         <div class="row g-4">
             <div class="col-xl-7">
                 <div class="table-card">
                     <div class="p-4 border-bottom">
-                        <h2 class="h5 mb-1">Recent Bookings</h2>
-                        <p class="text-secondary mb-0">Latest user orders and assignment status</p>
+                        <h2 class="h5 mb-1">Recent bookings</h2>
+                        <p class="text-secondary mb-0">What customers booked and where each order stands</p>
                     </div>
                     <div class="table-responsive">
                         <table class="table table-hover align-middle mb-0">

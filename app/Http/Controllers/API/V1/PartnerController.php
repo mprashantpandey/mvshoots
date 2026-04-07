@@ -23,7 +23,7 @@ class PartnerController extends Controller
 
         $partners = Partner::query()
             ->kycVerified()
-            ->with(['managedCity', 'serviceCities'])
+            ->with(['managedCity', 'serviceCities', 'kyc'])
             ->withAvg('ratings', 'rating')
             ->withCount('ratings')
             ->filter([

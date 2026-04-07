@@ -10,7 +10,7 @@ const props = defineProps({
     },
     subtitle: {
         type: String,
-        default: 'Premium responsive dashboard',
+        default: 'Operations overview',
     },
 });
 
@@ -76,30 +76,74 @@ function logout() {
         </aside>
 
         <div class="content-area">
-            <div class="topbar d-flex flex-column flex-lg-row align-items-lg-center justify-content-between gap-3">
-                <div class="d-flex align-items-center gap-3">
-                    <button class="btn btn-light d-lg-none" type="button" data-bs-toggle="offcanvas" data-bs-target="#mobileSidebar">
+            <div class="topbar admin-topbar">
+                <div class="d-flex align-items-center gap-2 gap-md-3 w-100 min-w-0">
+                    <button
+                        class="btn btn-light admin-topbar-menu-btn d-lg-none flex-shrink-0"
+                        type="button"
+                        data-bs-toggle="offcanvas"
+                        data-bs-target="#mobileSidebar"
+                        aria-controls="mobileSidebar"
+                        aria-label="Open menu"
+                    >
                         <i class="bi bi-list fs-5"></i>
                     </button>
-                    <div>
-                        <div class="text-secondary small">{{ subtitle }}</div>
-                        <h1 class="h4 mb-0">{{ title }}</h1>
+
+                    <div class="min-w-0 flex-grow-1">
+                        <div class="text-secondary small d-none d-md-block text-truncate">{{ subtitle }}</div>
+                        <h1 class="h5 mb-0 text-truncate d-lg-none">{{ title }}</h1>
+                        <h1 class="h4 mb-0 d-none d-lg-block">{{ title }}</h1>
                     </div>
-                </div>
-                <div class="d-flex align-items-center gap-3 flex-wrap">
-                    <Link class="btn btn-outline-secondary" href="/admin/notifications">
-                        <i class="bi bi-bell me-2"></i>Notifications
-                    </Link>
-                    <div class="d-flex align-items-center gap-2" v-if="admin">
-                        <div class="avatar-circle">{{ admin.name?.slice(0, 1)?.toUpperCase() }}</div>
-                        <div>
-                            <div class="fw-semibold">{{ admin.name }}</div>
-                            <div class="small text-secondary">{{ admin.email }}</div>
+
+                    <!-- Desktop toolbar -->
+                    <div class="d-none d-lg-flex align-items-center gap-2 gap-xl-3 flex-shrink-0">
+                        <Link class="btn btn-outline-secondary btn-sm" href="/admin/notifications">
+                            <i class="bi bi-bell me-1"></i>Notifications
+                        </Link>
+                        <div class="d-flex align-items-center gap-2" v-if="admin">
+                            <div class="avatar-circle">{{ admin.name?.slice(0, 1)?.toUpperCase() }}</div>
+                            <div class="d-none d-xl-block text-start" style="max-width: 12rem">
+                                <div class="fw-semibold text-truncate">{{ admin.name }}</div>
+                                <div class="small text-secondary text-truncate">{{ admin.email }}</div>
+                            </div>
+                        </div>
+                        <button class="btn btn-dark btn-sm" type="button" @click="logout">
+                            <i class="bi bi-box-arrow-right me-1"></i>Logout
+                        </button>
+                    </div>
+
+                    <!-- Mobile / tablet: notifications + account menu -->
+                    <div class="d-flex d-lg-none align-items-center gap-1 flex-shrink-0">
+                        <Link
+                            class="btn btn-light admin-topbar-icon-btn"
+                            href="/admin/notifications"
+                            aria-label="Notifications"
+                        >
+                            <i class="bi bi-bell"></i>
+                        </Link>
+                        <div class="dropdown">
+                            <button
+                                class="btn btn-light admin-topbar-icon-btn"
+                                type="button"
+                                data-bs-toggle="dropdown"
+                                aria-expanded="false"
+                                aria-label="Account menu"
+                            >
+                                <i class="bi bi-person-circle fs-5"></i>
+                            </button>
+                            <ul class="dropdown-menu dropdown-menu-end shadow border-0 py-2 admin-account-dropdown">
+                                <li v-if="admin" class="px-3 pb-2 mb-2 border-bottom">
+                                    <div class="fw-semibold text-truncate" style="max-width: 14rem">{{ admin.name }}</div>
+                                    <div class="small text-secondary text-truncate" style="max-width: 14rem">{{ admin.email }}</div>
+                                </li>
+                                <li>
+                                    <button class="dropdown-item text-danger d-flex align-items-center gap-2" type="button" @click="logout">
+                                        <i class="bi bi-box-arrow-right"></i>Log out
+                                    </button>
+                                </li>
+                            </ul>
                         </div>
                     </div>
-                    <button class="btn btn-dark" type="button" @click="logout">
-                        <i class="bi bi-box-arrow-right me-2"></i>Logout
-                    </button>
                 </div>
             </div>
 
@@ -108,12 +152,23 @@ function logout() {
         </div>
     </div>
 
-    <div class="offcanvas offcanvas-start mobile-sidebar d-lg-none" tabindex="-1" id="mobileSidebar">
-        <div class="offcanvas-header border-bottom border-secondary-subtle">
-            <h5 class="offcanvas-title">{{ appName }} Admin</h5>
-            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas"></button>
+    <div
+        class="offcanvas offcanvas-start mobile-sidebar d-lg-none"
+        tabindex="-1"
+        id="mobileSidebar"
+        aria-labelledby="mobileSidebarLabel"
+    >
+        <div class="offcanvas-header border-bottom border-secondary">
+            <div class="d-flex align-items-center gap-2">
+                <div class="brand-mark brand-mark--sm"><i class="bi bi-camera-fill"></i></div>
+                <div>
+                    <h5 class="offcanvas-title mb-0" id="mobileSidebarLabel">{{ appName }}</h5>
+                    <div class="small text-secondary">Menu</div>
+                </div>
+            </div>
+            <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
         </div>
-        <div class="offcanvas-body">
+        <div class="offcanvas-body pt-3">
             <nav class="nav flex-column">
                 <Link
                     v-for="link in links"
@@ -121,6 +176,7 @@ function logout() {
                     :href="link.href"
                     class="nav-link"
                     :class="{ active: isActive(link.href) }"
+                    data-bs-dismiss="offcanvas"
                 >
                     <i :class="['bi', link.icon]" />
                     <span>{{ link.label }}</span>

@@ -391,6 +391,171 @@ textarea.form-control {
     object-fit: cover;
 }
 
+/* —— Customer landing (public home) —— */
+.landing-shell--customer {
+    max-width: 1120px;
+    margin: 0 auto;
+}
+
+.landing-topbar--customer {
+    flex-wrap: wrap;
+    align-items: center;
+}
+
+.landing-topbar-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-shrink: 0;
+}
+
+.hero-panel--customer {
+    align-items: start;
+}
+
+.hero-title--customer {
+    max-width: none;
+    font-size: clamp(2.1rem, 5.5vw, 3.35rem);
+    line-height: 1.05;
+}
+
+.hero-journey-grid {
+    grid-template-columns: 1fr;
+}
+
+@media (min-width: 768px) {
+    .hero-journey-grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+}
+
+.landing-journey-card {
+    position: relative;
+    padding-top: 2.25rem;
+}
+
+.landing-journey-step {
+    position: absolute;
+    top: 1rem;
+    left: 1.35rem;
+    width: 1.75rem;
+    height: 1.75rem;
+    border-radius: 999px;
+    background: rgba(37, 99, 235, 0.12);
+    color: var(--admin-primary);
+    font-size: 0.8rem;
+    font-weight: 800;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.landing-journey-step--light {
+    background: rgba(255, 255, 255, 0.15);
+    color: #fff;
+}
+
+.landing-value-strip {
+    padding: 1.5rem 1.75rem;
+    border: 1px solid var(--admin-border);
+    border-radius: 28px;
+    background: rgba(255, 255, 255, 0.88);
+    box-shadow: 0 24px 50px rgba(15, 23, 42, 0.06);
+}
+
+.letter-space {
+    letter-spacing: 0.12em;
+}
+
+.landing-value-grid {
+    gap: 1rem;
+}
+
+@media (min-width: 768px) {
+    .landing-value-grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+}
+
+.hero-cta-row {
+    margin-top: 0.25rem;
+}
+
+.landing-inline-note {
+    display: block;
+    font-size: 0.95rem;
+    color: var(--admin-muted);
+    max-width: 52ch;
+    line-height: 1.5;
+}
+
+.landing-cta--staff {
+    align-items: center;
+}
+
+@media (max-width: 575.98px) {
+    .landing-cta--staff {
+        flex-direction: column;
+        align-items: stretch;
+    }
+}
+
+/* —— Admin layout: mobile-friendly topbar —— */
+.admin-topbar {
+    position: sticky;
+    top: 0;
+    z-index: 1030;
+}
+
+.admin-topbar-menu-btn,
+.admin-topbar-icon-btn {
+    width: 2.65rem;
+    height: 2.65rem;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 14px;
+}
+
+.admin-topbar-icon-btn {
+    border: 1px solid rgba(148, 163, 184, 0.35);
+}
+
+.admin-account-dropdown {
+    min-width: 12rem;
+}
+
+.mobile-sidebar .brand-mark {
+    width: 2.5rem;
+    height: 2.5rem;
+    border-radius: 16px;
+    background: linear-gradient(135deg, #60a5fa, #34d399);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    box-shadow: 0 18px 40px rgba(96, 165, 250, 0.22);
+}
+
+.brand-mark--sm {
+    width: 2rem;
+    height: 2rem;
+    border-radius: 12px;
+    font-size: 0.95rem;
+}
+
+.mobile-sidebar .offcanvas-header {
+    background: rgba(248, 250, 252, 0.98);
+}
+
+@media (min-width: 992px) {
+    .admin-topbar {
+        position: relative;
+        z-index: 1;
+    }
+}
+
 @media (max-width: 991.98px) {
     .content-area {
         padding: 1rem;
