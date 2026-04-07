@@ -8,6 +8,8 @@ use App\Models\Partner;
 use App\Models\Plan;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
 class BookingApiTest extends TestCase
@@ -104,6 +106,8 @@ class BookingApiTest extends TestCase
 
     public function test_booking_can_move_through_assignment_results_and_final_payment_flow(): void
     {
+        Storage::fake('public');
+
         $user = User::create([
             'name' => 'Lifecycle User',
             'phone' => '+913333333333',
@@ -200,17 +204,19 @@ class BookingApiTest extends TestCase
             ->assertJsonPath('data.status', 'in_progress');
 
         $this->app['auth']->forgetGuards();
-        $this->withToken($partnerToken)
-            ->postJson("/api/v1/bookings/{$bookingId}/upload-results", [
-                'results' => [
-                    [
-                        'file_url' => 'https://example.com/results/photo1.jpg',
-                        'file_type' => 'photo',
-                        'notes' => 'Hero frame',
-                    ],
-                ],
-            ])
-            ->assertOk();
+        $uploadResponse = $this->withToken($partnerToken)
+            ->post("/api/v1/bookings/{$bookingId}/upload-results", [
+                'file' => UploadedFile::fake()->image('photo1.jpg'),
+                'file_type' => 'photo',
+                'notes' => 'Hero frame',
+            ]);
+
+        $uploadResponse
+            ->assertOk()
+            ->assertJsonPath('data.0.file_type', 'photo');
+
+        $resultPath = str_replace('/storage/', '', parse_url($uploadResponse->json('data.0.file_url'), PHP_URL_PATH) ?: '');
+        Storage::disk('public')->assertExists($resultPath);
 
         $this->app['auth']->forgetGuards();
         $this->withToken($userToken)
@@ -286,5 +292,269 @@ class BookingApiTest extends TestCase
             ->assertStatus(422)
             ->assertJsonPath('success', false)
             ->assertJsonPath('message', 'Final payment requires uploaded results.');
+    }
+
+    public function test_owner_assignment_and_partner_result_upload_are_visible_to_all_actors(): void
+    {
+        Storage::fake('public');
+
+        $user = User::create([
+            'name' => 'Visibility User',
+            'phone' => '+916666666666',
+            'email' => 'visibility.user@example.com',
+            'firebase_uid' => 'firebase-visibility-user',
+            'status' => 'active',
+        ]);
+
+        $owner = Owner::create([
+            'name' => 'Visibility Owner',
+            'email' => 'visibility.owner@example.com',
+            'password' => bcrypt('password'),
+            'status' => 'active',
+        ]);
+
+        $partner = Partner::create([
+            'name' => 'Visibility Partner',
+            'phone' => '+917777777777',
+            'email' => 'visibility.partner@example.com',
+            'firebase_uid' => 'firebase-visibility-partner',
+            'status' => 'active',
+        ]);
+
+        $category = Category::create([
+            'name' => 'Corporate',
+            'description' => 'Corporate shoots',
+            'image' => 'categories/corporate.jpg',
+            'status' => 'active',
+        ]);
+
+        $plan = Plan::create([
+            'category_id' => $category->id,
+            'title' => 'Corporate Prime',
+            'description' => 'Corporate package',
+            'price' => 12000,
+            'duration' => '4 hours',
+            'inclusions' => ['40 edited photos'],
+            'status' => 'active',
+        ]);
+
+        $userToken = $user->createToken('visibility-user')->plainTextToken;
+        $ownerToken = $owner->createToken('visibility-owner')->plainTextToken;
+        $partnerToken = $partner->createToken('visibility-partner')->plainTextToken;
+
+        $this->app['auth']->forgetGuards();
+        $bookingId = $this
+            ->withToken($userToken)
+            ->postJson('/api/v1/bookings', [
+                'category_id' => $category->id,
+                'plan_id' => $plan->id,
+                'booking_date' => now()->addDays(10)->toDateString(),
+                'booking_time' => '13:00',
+                'address' => 'Visibility Street',
+                'notes' => 'Reception desk entry',
+            ])
+            ->assertCreated()
+            ->json('data.id');
+
+        $this->app['auth']->forgetGuards();
+        $this->withToken($userToken)
+            ->postJson('/api/v1/payments/advance', [
+                'booking_id' => $bookingId,
+                'payment_reference' => 'adv_visibility_001',
+            ])
+            ->assertOk();
+
+        $this->app['auth']->forgetGuards();
+        $this->withToken($ownerToken)
+            ->postJson("/api/v1/bookings/{$bookingId}/assign-partner", [
+                'partner_id' => $partner->id,
+                'remarks' => 'Assigning for visibility check',
+            ])
+            ->assertOk()
+            ->assertJsonPath('data.assigned_partner.id', $partner->id)
+            ->assertJsonPath('data.status', 'assigned');
+
+        $this->assertDatabaseHas('notifications', [
+            'user_type' => 'partner',
+            'user_id' => $partner->id,
+            'type' => 'booking_assigned',
+            'reference_id' => $bookingId,
+        ]);
+
+        $this->app['auth']->forgetGuards();
+        $this->withToken($partnerToken)
+            ->getJson('/api/v1/bookings')
+            ->assertOk()
+            ->assertJsonPath('data.data.0.id', $bookingId);
+
+        $this->app['auth']->forgetGuards();
+        $this->withToken($partnerToken)
+            ->postJson("/api/v1/bookings/{$bookingId}/status", [
+                'status' => 'accepted',
+                'remarks' => 'Accepted',
+            ])
+            ->assertOk();
+
+        $this->app['auth']->forgetGuards();
+        $this->withToken($partnerToken)
+            ->postJson("/api/v1/bookings/{$bookingId}/status", [
+                'status' => 'in_progress',
+                'remarks' => 'Started shooting',
+            ])
+            ->assertOk();
+
+        $this->app['auth']->forgetGuards();
+        $uploadResponse = $this->withToken($partnerToken)
+            ->post("/api/v1/bookings/{$bookingId}/upload-results", [
+                'file' => UploadedFile::fake()->image('visibility-proof.jpg'),
+                'file_type' => 'photo',
+                'notes' => 'Uploaded by partner workflow',
+            ]);
+
+        $uploadResponse
+            ->assertOk()
+            ->assertJsonPath('data.0.file_type', 'photo')
+            ->assertJsonPath('data.0.notes', 'Uploaded by partner workflow');
+
+        $uploadedFileUrl = $uploadResponse->json('data.0.file_url');
+        $resultPath = str_replace('/storage/', '', parse_url($uploadedFileUrl, PHP_URL_PATH) ?: '');
+        Storage::disk('public')->assertExists($resultPath);
+
+        $this->app['auth']->forgetGuards();
+        $this->withToken($ownerToken)
+            ->getJson("/api/v1/bookings/{$bookingId}")
+            ->assertOk()
+            ->assertJsonPath('data.assigned_partner.id', $partner->id)
+            ->assertJsonPath('data.results.0.file_url', $uploadedFileUrl);
+
+        $this->app['auth']->forgetGuards();
+        $this->withToken($userToken)
+            ->getJson("/api/v1/bookings/{$bookingId}")
+            ->assertOk()
+            ->assertJsonPath('data.assigned_partner.id', $partner->id)
+            ->assertJsonPath('data.results_locked', true)
+            ->assertJsonCount(0, 'data.results');
+    }
+
+    public function test_partner_can_collect_final_payment_in_cash_after_uploading_results(): void
+    {
+        Storage::fake('public');
+
+        $user = User::create([
+            'name' => 'Cash User',
+            'phone' => '+918888888888',
+            'email' => 'cash.user@example.com',
+            'firebase_uid' => 'firebase-cash-user',
+            'status' => 'active',
+        ]);
+
+        $owner = Owner::create([
+            'name' => 'Cash Owner',
+            'email' => 'cash.owner@example.com',
+            'password' => bcrypt('password'),
+            'status' => 'active',
+        ]);
+
+        $partner = Partner::create([
+            'name' => 'Cash Partner',
+            'phone' => '+919999999999',
+            'email' => 'cash.partner@example.com',
+            'firebase_uid' => 'firebase-cash-partner',
+            'status' => 'active',
+        ]);
+
+        $category = Category::create([
+            'name' => 'Studio',
+            'description' => 'Studio shoots',
+            'image' => 'categories/studio.jpg',
+            'status' => 'active',
+        ]);
+
+        $plan = Plan::create([
+            'category_id' => $category->id,
+            'title' => 'Studio Pro',
+            'description' => 'Studio package',
+            'price' => 9000,
+            'duration' => '3 hours',
+            'inclusions' => ['30 edited photos'],
+            'status' => 'active',
+        ]);
+
+        $userToken = $user->createToken('cash-user')->plainTextToken;
+        $ownerToken = $owner->createToken('cash-owner')->plainTextToken;
+        $partnerToken = $partner->createToken('cash-partner')->plainTextToken;
+
+        $this->app['auth']->forgetGuards();
+        $bookingId = $this
+            ->withToken($userToken)
+            ->postJson('/api/v1/bookings', [
+                'category_id' => $category->id,
+                'plan_id' => $plan->id,
+                'booking_date' => now()->addDays(7)->toDateString(),
+                'booking_time' => '11:00',
+                'address' => 'Cash Street',
+            ])
+            ->assertCreated()
+            ->json('data.id');
+
+        $this->app['auth']->forgetGuards();
+        $this->withToken($userToken)
+            ->postJson('/api/v1/payments/advance', [
+                'booking_id' => $bookingId,
+                'payment_reference' => 'adv_cash_001',
+            ])
+            ->assertOk();
+
+        $this->app['auth']->forgetGuards();
+        $this->withToken($ownerToken)
+            ->postJson("/api/v1/bookings/{$bookingId}/assign-partner", [
+                'partner_id' => $partner->id,
+            ])
+            ->assertOk();
+
+        $this->app['auth']->forgetGuards();
+        $this->withToken($partnerToken)
+            ->postJson("/api/v1/bookings/{$bookingId}/status", [
+                'status' => 'accepted',
+            ])
+            ->assertOk();
+
+        $this->app['auth']->forgetGuards();
+        $this->withToken($partnerToken)
+            ->postJson("/api/v1/bookings/{$bookingId}/status", [
+                'status' => 'in_progress',
+            ])
+            ->assertOk();
+
+        $this->app['auth']->forgetGuards();
+        $this->withToken($partnerToken)
+            ->post("/api/v1/bookings/{$bookingId}/upload-results", [
+                'file' => UploadedFile::fake()->image('cash-proof.jpg'),
+                'file_type' => 'photo',
+            ])
+            ->assertOk();
+
+        $this->app['auth']->forgetGuards();
+        $this->withToken($partnerToken)
+            ->postJson('/api/v1/payments/final/cash-collect', [
+                'booking_id' => $bookingId,
+                'payment_reference' => 'cash_collected_on_delivery',
+            ])
+            ->assertOk()
+            ->assertJsonPath('data.payment_type', 'final')
+            ->assertJsonPath('data.payment_status', 'paid');
+
+        $this->assertDatabaseHas('bookings', [
+            'id' => $bookingId,
+            'final_paid' => true,
+            'status' => 'completed',
+        ]);
+
+        $this->app['auth']->forgetGuards();
+        $this->withToken($userToken)
+            ->getJson("/api/v1/bookings/{$bookingId}")
+            ->assertOk()
+            ->assertJsonPath('data.results_locked', false)
+            ->assertJsonCount(1, 'data.results');
     }
 }

@@ -56,6 +56,7 @@ Route::prefix('v1')->group(function (): void {
         Route::post('/payments/final-intent', [PaymentController::class, 'finalIntent']);
         Route::post('/payments/advance', [PaymentController::class, 'payAdvance']);
         Route::post('/payments/final', [PaymentController::class, 'payFinal']);
+        Route::post('/payments/final/cash-collect', [PaymentController::class, 'collectFinalCash']);
         Route::get('/payments/{booking}', [PaymentController::class, 'show']);
 
         Route::get('/notifications', [NotificationController::class, 'index']);

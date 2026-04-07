@@ -112,6 +112,40 @@ class PaymentController extends Controller
         return $this->success(new PaymentResource($payment), 'Final payment recorded');
     }
 
+    public function collectFinalCash(Request $request): JsonResponse
+    {
+        $actor = $request->user('sanctum');
+
+        abort_unless(
+            $actor instanceof Partner || $actor instanceof Owner || $actor instanceof Admin,
+            403,
+            'Only partners or admins can record cash collection.'
+        );
+
+        $data = $request->validate([
+            'booking_id' => ['required', 'exists:bookings,id'],
+            'payment_reference' => ['nullable', 'string', 'max:255'],
+        ]);
+
+        $booking = Booking::findOrFail($data['booking_id']);
+
+        if ($actor instanceof Partner) {
+            abort_unless(
+                (int) $booking->assigned_partner_id === (int) $actor->id,
+                403,
+                'You can only collect cash for your assigned bookings.'
+            );
+        }
+
+        $payment = $this->paymentService->recordFinalCashCollection(
+            $booking->id,
+            $actor,
+            $data['payment_reference'] ?? null,
+        );
+
+        return $this->success(new PaymentResource($payment), 'Final payment collected');
+    }
+
     public function show(Request $request, Booking $booking): JsonResponse
     {
         $actor = $request->user('sanctum');

@@ -134,6 +134,72 @@ class PaymentService
         });
     }
 
+    public function recordFinalCashCollection(int $bookingId, mixed $actor, ?string $reference = null): Payment
+    {
+        return $this->db->transaction(function () use ($bookingId, $actor, $reference): Payment {
+            $booking = Booking::with('results')->findOrFail($bookingId);
+
+            if (! $booking->advance_paid) {
+                throw new InvalidArgumentException('Advance payment is required before final payment.');
+            }
+
+            if ($booking->final_paid) {
+                throw new InvalidArgumentException('Final payment has already been completed.');
+            }
+
+            if ($booking->results->isEmpty()) {
+                throw new InvalidArgumentException('Final payment requires uploaded results.');
+            }
+
+            $actorType = str(class_basename($actor))->lower()->value();
+            $actorId = (int) ($actor->id ?? 0);
+            $resolvedReference = $reference ?: "cash_collected_by_{$actorType}_{$actorId}";
+
+            $payment = Payment::create([
+                'booking_id' => $booking->id,
+                'payment_type' => PaymentType::Final->value,
+                'amount' => $booking->final_amount,
+                'payment_status' => PaymentStatus::Paid->value,
+                'payment_reference' => $resolvedReference,
+                'paid_at' => now(),
+            ]);
+
+            $booking->update([
+                'final_paid' => true,
+                'status' => BookingStatus::Completed->value,
+            ]);
+
+            $booking->statusLogs()->create([
+                'status' => BookingStatus::Completed->value,
+                'remarks' => 'Final payment collected offline',
+                'changed_by_type' => $actorType,
+                'changed_by_id' => $actorId,
+            ]);
+
+            $this->notificationService->create(
+                'user',
+                (int) $booking->user_id,
+                'Final payment received',
+                'Your booking has been marked fully paid and completed.',
+                'final_paid_offline',
+                (int) $booking->id
+            );
+
+            if ($booking->assigned_partner_id) {
+                $this->notificationService->create(
+                    'partner',
+                    (int) $booking->assigned_partner_id,
+                    'Final payment collected',
+                    "Booking #{$booking->id} has been marked fully paid.",
+                    'final_paid_offline',
+                    (int) $booking->id
+                );
+            }
+
+            return $payment;
+        });
+    }
+
     public function verifyGatewayPayment(array $payload): bool
     {
         return $this->paymentGateway->verifyPayment($payload);
