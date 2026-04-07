@@ -12,7 +12,7 @@ class ReelResource extends JsonResource
         return [
             'id' => (int) $this->id,
             'title' => $this->title,
-            'video_url' => $this->video_url,
+            'video_url' => $this->resolveMediaUrl($this->video_url),
             'thumbnail' => $this->resolveMediaUrl($this->thumbnail),
             'category_id' => $this->category_id === null ? null : (int) $this->category_id,
             'status' => $this->status,
