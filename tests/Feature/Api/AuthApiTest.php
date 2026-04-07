@@ -70,6 +70,21 @@ class AuthApiTest extends TestCase
             ]);
     }
 
+    public function test_partner_sync_requires_registration_when_phone_is_new_and_profile_is_incomplete(): void
+    {
+        $response = $this->postJson('/api/v1/auth/partner/sync', [
+            'phone' => '+919876543211',
+            'firebase_uid' => 'firebase-partner-2',
+        ]);
+
+        $response
+            ->assertOk()
+            ->assertJsonPath('data.requires_registration', true)
+            ->assertJsonPath('data.is_new', true)
+            ->assertJsonPath('data.token', null)
+            ->assertJsonPath('data.partner', null);
+    }
+
     public function test_authenticated_actor_can_fetch_and_update_profiles(): void
     {
         $user = User::create([

@@ -76,21 +76,55 @@ class AuthController extends Controller
     public function syncPartner(Request $request): JsonResponse
     {
         $data = $request->validate([
-            'name' => ['required', 'string', 'max:255'],
             'phone' => ['required', 'string', 'max:20'],
+            'name' => ['nullable', 'string', 'max:255'],
             'email' => ['nullable', 'email'],
             'firebase_uid' => ['nullable', 'string', 'max:255'],
             'status' => ['nullable', 'string', 'max:50'],
         ]);
 
-        $partner = Partner::updateOrCreate(
-            ['phone' => $data['phone']],
-            array_merge(['status' => 'active'], $data)
-        );
+        $partner = Partner::where('phone', $data['phone'])->first();
+
+        if ($partner) {
+            $partner->fill(array_filter([
+                'name' => $data['name'] ?? null,
+                'email' => $data['email'] ?? null,
+                'firebase_uid' => $data['firebase_uid'] ?? null,
+                'status' => $data['status'] ?? null,
+            ], fn ($value) => filled($value)))->save();
+
+            return $this->success([
+                'token' => $this->issueToken($partner->fresh(), 'partner-app'),
+                'partner' => new ProfileResource($partner->fresh()),
+                'is_new' => false,
+                'requires_registration' => false,
+            ], 'Partner logged in');
+        }
+
+        if (blank($data['name'] ?? null)) {
+            return $this->success([
+                'token' => null,
+                'partner' => null,
+                'is_new' => true,
+                'requires_registration' => true,
+                'phone' => $data['phone'],
+                'firebase_uid' => $data['firebase_uid'] ?? null,
+            ], 'Partner registration required');
+        }
+
+        $partner = Partner::create([
+            'name' => $data['name'],
+            'phone' => $data['phone'],
+            'email' => $data['email'] ?? null,
+            'firebase_uid' => $data['firebase_uid'] ?? null,
+            'status' => $data['status'] ?? 'active',
+        ]);
 
         return $this->success([
             'token' => $this->issueToken($partner, 'partner-app'),
             'partner' => new ProfileResource($partner),
+            'is_new' => true,
+            'requires_registration' => false,
         ], 'Partner profile synced');
     }
 
