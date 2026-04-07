@@ -28,9 +28,12 @@ Route::prefix('v1')->group(function (): void {
             Route::delete('/user/account', [AuthController::class, 'deleteUserAccount']);
             Route::get('/partner/me', [AuthController::class, 'partnerProfile']);
             Route::put('/partner/profile', [AuthController::class, 'updatePartnerProfile']);
+            Route::delete('/partner/account', [AuthController::class, 'deletePartnerAccount']);
             Route::post('/owner/logout', [AuthController::class, 'ownerLogout']);
             Route::get('/owner/me', [AuthController::class, 'ownerProfile']);
             Route::put('/owner/profile', [AuthController::class, 'updateOwnerProfile']);
+            Route::put('/owner/password', [AuthController::class, 'updateOwnerPassword']);
+            Route::delete('/owner/account', [AuthController::class, 'deleteOwnerAccount']);
         });
     });
 

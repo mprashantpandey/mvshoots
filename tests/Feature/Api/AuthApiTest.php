@@ -210,4 +210,88 @@ class AuthApiTest extends TestCase
         $this->assertDatabaseMissing('device_tokens', ['user_id' => $user->id, 'user_type' => 'user']);
         $this->assertDatabaseMissing('notifications', ['user_id' => $user->id, 'user_type' => 'user']);
     }
+
+    public function test_authenticated_partner_can_delete_account(): void
+    {
+        $partner = Partner::create([
+            'name' => 'Delete Partner',
+            'phone' => '+919999000000',
+            'email' => 'partner.delete@example.com',
+            'firebase_uid' => 'firebase-delete-partner',
+            'status' => 'active',
+        ]);
+
+        DeviceToken::create([
+            'user_type' => 'partner',
+            'user_id' => $partner->id,
+            'device_token' => 'partner-token-123',
+            'platform' => 'android',
+        ]);
+
+        AppNotification::create([
+            'user_type' => 'partner',
+            'user_id' => $partner->id,
+            'title' => 'Partner Hello',
+            'body' => 'Body',
+            'type' => 'booking_assigned',
+            'is_read' => false,
+        ]);
+
+        $this->withToken($partner->createToken('delete-partner')->plainTextToken)
+            ->deleteJson('/api/v1/auth/partner/account')
+            ->assertOk()
+            ->assertJsonPath('success', true);
+
+        $this->assertDatabaseMissing('partners', ['id' => $partner->id]);
+        $this->assertDatabaseMissing('device_tokens', ['user_id' => $partner->id, 'user_type' => 'partner']);
+        $this->assertDatabaseMissing('notifications', ['user_id' => $partner->id, 'user_type' => 'partner']);
+    }
+
+    public function test_authenticated_admin_can_change_password_and_delete_account(): void
+    {
+        $admin = Admin::create([
+            'name' => 'Delete Admin',
+            'email' => 'delete.admin@example.com',
+            'password' => bcrypt('password'),
+        ]);
+
+        DeviceToken::create([
+            'user_type' => 'admin',
+            'user_id' => $admin->id,
+            'device_token' => 'admin-token-123',
+            'platform' => 'android',
+        ]);
+
+        AppNotification::create([
+            'user_type' => 'admin',
+            'user_id' => $admin->id,
+            'title' => 'Admin Hello',
+            'body' => 'Body',
+            'type' => 'system',
+            'is_read' => false,
+        ]);
+
+        $token = $admin->createToken('admin-account')->plainTextToken;
+
+        $this->withToken($token)
+            ->putJson('/api/v1/auth/owner/password', [
+                'current_password' => 'password',
+                'password' => 'newpassword',
+                'password_confirmation' => 'newpassword',
+            ])
+            ->assertOk()
+            ->assertJsonPath('success', true);
+
+        $this->assertTrue(\Illuminate\Support\Facades\Hash::check('newpassword', $admin->fresh()->password));
+
+        $this->app['auth']->forgetGuards();
+        $this->withToken($admin->createToken('admin-delete')->plainTextToken)
+            ->deleteJson('/api/v1/auth/owner/account')
+            ->assertOk()
+            ->assertJsonPath('success', true);
+
+        $this->assertDatabaseMissing('admins', ['id' => $admin->id]);
+        $this->assertDatabaseMissing('device_tokens', ['user_id' => $admin->id, 'user_type' => 'admin']);
+        $this->assertDatabaseMissing('notifications', ['user_id' => $admin->id, 'user_type' => 'admin']);
+    }
 }

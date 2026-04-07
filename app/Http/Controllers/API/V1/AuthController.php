@@ -14,6 +14,7 @@ use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Validation\Rules\Password;
 use Illuminate\Validation\ValidationException;
 
 class AuthController extends Controller
@@ -267,6 +268,28 @@ class AuthController extends Controller
         return $this->success(new ProfileResource($actor->fresh()), 'Partner profile updated');
     }
 
+    public function deletePartnerAccount(Request $request): JsonResponse
+    {
+        $actor = $request->user('sanctum');
+
+        abort_unless($actor instanceof Partner, 403, 'Only partners can delete this account.');
+
+        DeviceToken::query()
+            ->where('user_type', 'partner')
+            ->where('user_id', $actor->id)
+            ->delete();
+
+        AppNotification::query()
+            ->where('user_type', 'partner')
+            ->where('user_id', $actor->id)
+            ->delete();
+
+        $actor->tokens()->delete();
+        $actor->delete();
+
+        return $this->success(null, 'Partner account deleted');
+    }
+
     public function updateOwnerProfile(Request $request): JsonResponse
     {
         $actor = $request->user('sanctum');
@@ -281,6 +304,54 @@ class AuthController extends Controller
         $actor->update($data);
 
         return $this->success(new ProfileResource($actor->fresh()), 'Owner profile updated');
+    }
+
+    public function updateOwnerPassword(Request $request): JsonResponse
+    {
+        $actor = $request->user('sanctum');
+
+        abort_unless($actor instanceof Owner || $actor instanceof Admin, 403, 'Only admins can update this password.');
+
+        $data = $request->validate([
+            'current_password' => ['required', 'string'],
+            'password' => ['required', 'string', Password::min(6), 'confirmed'],
+        ]);
+
+        if (! Hash::check($data['current_password'], $actor->password)) {
+            throw ValidationException::withMessages([
+                'current_password' => ['Your current password is incorrect.'],
+            ]);
+        }
+
+        $actor->update([
+            'password' => Hash::make($data['password']),
+        ]);
+
+        return $this->success(null, 'Password updated successfully');
+    }
+
+    public function deleteOwnerAccount(Request $request): JsonResponse
+    {
+        $actor = $request->user('sanctum');
+
+        abort_unless($actor instanceof Owner || $actor instanceof Admin, 403, 'Only admins can delete this account.');
+
+        $userType = $actor instanceof Admin ? 'admin' : 'owner';
+
+        DeviceToken::query()
+            ->where('user_type', $userType)
+            ->where('user_id', $actor->id)
+            ->delete();
+
+        AppNotification::query()
+            ->where('user_type', $userType)
+            ->where('user_id', $actor->id)
+            ->delete();
+
+        $actor->tokens()->delete();
+        $actor->delete();
+
+        return $this->success(null, 'Admin account deleted');
     }
 
     private function issueToken(User|Partner $authenticatable, string $tokenName): string
