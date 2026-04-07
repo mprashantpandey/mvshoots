@@ -68,6 +68,13 @@ class PaymentService
                 (int) $booking->id
             );
 
+            $this->notificationService->notifyOperators(
+                'Advance payment received',
+                "Booking #{$booking->id} is now confirmed and ready for assignment.",
+                'advance_paid',
+                (int) $booking->id
+            );
+
             return $payment;
         });
     }
@@ -129,6 +136,13 @@ class PaymentService
                     (int) $booking->id
                 );
             }
+
+            $this->notificationService->notifyOperators(
+                'Booking completed',
+                "Booking #{$booking->id} has been fully paid and completed.",
+                'booking_completed',
+                (int) $booking->id
+            );
 
             return $payment;
         });
@@ -195,6 +209,13 @@ class PaymentService
                     (int) $booking->id
                 );
             }
+
+            $this->notificationService->notifyOperators(
+                'Final payment collected',
+                "Booking #{$booking->id} has been marked fully paid offline.",
+                'final_paid_offline',
+                (int) $booking->id
+            );
 
             return $payment;
         });

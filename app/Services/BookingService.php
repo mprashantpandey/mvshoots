@@ -49,6 +49,13 @@ class BookingService
                 (int) $booking->id
             );
 
+            $this->notificationService->notifyOperators(
+                'New booking received',
+                "Booking #{$booking->id} has been created and is awaiting advance payment.",
+                'booking_created',
+                (int) $booking->id
+            );
+
             return $booking;
         });
     }
@@ -103,6 +110,13 @@ class BookingService
             (int) $booking->id
         );
 
+        $this->notificationService->notifyOperators(
+            'Booking status updated',
+            "Booking #{$booking->id} moved to {$status}.",
+            'booking_status_changed',
+            (int) $booking->id
+        );
+
         return $booking->fresh();
     }
 
@@ -135,6 +149,13 @@ class BookingService
             'Final payment pending',
             'Please complete the remaining 80% payment for your booking.',
             'final_payment_pending',
+            (int) $booking->id
+        );
+
+        $this->notificationService->notifyOperators(
+            'Results uploaded',
+            "Booking #{$booking->id} now has uploaded results.",
+            'results_uploaded',
             (int) $booking->id
         );
 

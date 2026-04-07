@@ -48,6 +48,13 @@ class PartnerAssignmentService
             (int) $booking->id
         );
 
+        $this->notificationService->notifyOperators(
+            'Partner assigned',
+            "Booking #{$booking->id} has been assigned to partner #{$partnerId}.",
+            'booking_assigned',
+            (int) $booking->id
+        );
+
         return $booking->fresh();
     }
 }

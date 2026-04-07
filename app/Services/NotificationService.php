@@ -2,8 +2,10 @@
 
 namespace App\Services;
 
+use App\Models\Admin;
 use App\Models\AppNotification;
 use App\Models\DeviceToken;
+use App\Models\Owner;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
@@ -107,10 +109,16 @@ class NotificationService
                         'notification' => [
                             'title' => (string) ($payload['title'] ?? 'MV Shoots'),
                             'body' => (string) ($payload['body'] ?? ''),
+                            'channel_id' => 'mvshoots_updates',
+                            'sound' => 'default',
                         ],
                         'data' => $data,
                         'android' => [
                             'priority' => 'high',
+                            'notification' => [
+                                'channel_id' => 'mvshoots_updates',
+                                'sound' => 'default',
+                            ],
                         ],
                     ],
                 ]);
@@ -143,6 +151,33 @@ class NotificationService
             'sent' => $sent,
             'provider' => 'fcm',
         ];
+    }
+
+    public function notifyOperators(string $title, string $body, string $type, ?int $referenceId = null): void
+    {
+        Admin::query()
+            ->select('id')
+            ->orderBy('id')
+            ->each(fn (Admin $admin) => $this->create(
+                'admin',
+                (int) $admin->id,
+                $title,
+                $body,
+                $type,
+                $referenceId
+            ));
+
+        Owner::query()
+            ->select('id')
+            ->orderBy('id')
+            ->each(fn (Owner $owner) => $this->create(
+                'owner',
+                (int) $owner->id,
+                $title,
+                $body,
+                $type,
+                $referenceId
+            ));
     }
 
     private function getFirebaseAccessToken(array $serviceAccount): ?string

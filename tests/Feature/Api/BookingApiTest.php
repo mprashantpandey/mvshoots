@@ -2,6 +2,8 @@
 
 namespace Tests\Feature\Api;
 
+use App\Models\Admin;
+use App\Models\AppNotification;
 use App\Models\Category;
 use App\Models\Owner;
 use App\Models\Partner;
@@ -123,6 +125,12 @@ class BookingApiTest extends TestCase
             'status' => 'active',
         ]);
 
+        $admin = Admin::create([
+            'name' => 'Lifecycle Admin',
+            'email' => 'admin@example.com',
+            'password' => bcrypt('password'),
+        ]);
+
         $partner = Partner::create([
             'name' => 'Lifecycle Partner',
             'phone' => '+914444444444',
@@ -234,6 +242,49 @@ class BookingApiTest extends TestCase
             ->assertJsonPath('data.status', 'completed')
             ->assertJsonPath('data.advance_paid', true)
             ->assertJsonPath('data.final_paid', true);
+
+        $this->assertDatabaseHas('notifications', [
+            'user_type' => 'admin',
+            'user_id' => $admin->id,
+            'type' => 'booking_created',
+            'reference_id' => $bookingId,
+        ]);
+
+        $this->assertDatabaseHas('notifications', [
+            'user_type' => 'admin',
+            'user_id' => $admin->id,
+            'type' => 'advance_paid',
+            'reference_id' => $bookingId,
+        ]);
+
+        $this->assertDatabaseHas('notifications', [
+            'user_type' => 'admin',
+            'user_id' => $admin->id,
+            'type' => 'booking_assigned',
+            'reference_id' => $bookingId,
+        ]);
+
+        $this->assertDatabaseHas('notifications', [
+            'user_type' => 'admin',
+            'user_id' => $admin->id,
+            'type' => 'results_uploaded',
+            'reference_id' => $bookingId,
+        ]);
+
+        $this->assertDatabaseHas('notifications', [
+            'user_type' => 'admin',
+            'user_id' => $admin->id,
+            'type' => 'booking_completed',
+            'reference_id' => $bookingId,
+        ]);
+
+        $this->assertGreaterThanOrEqual(
+            5,
+            AppNotification::query()
+                ->where('user_type', 'admin')
+                ->where('user_id', $admin->id)
+                ->count()
+        );
     }
 
     public function test_final_payment_requires_uploaded_results(): void
