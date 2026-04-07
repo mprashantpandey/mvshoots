@@ -4,7 +4,6 @@ namespace Tests\Feature\Admin;
 
 use App\Enums\BookingStatus;
 use App\Models\Admin;
-use App\Models\AppNotification;
 use App\Models\Booking;
 use App\Models\Category;
 use App\Models\Partner;
@@ -50,6 +49,7 @@ class BookingManagementTest extends TestCase
             'phone' => '8888888888',
             'status' => 'active',
         ]);
+        $this->seedVerifiedPartnerKyc($partner);
 
         $booking = Booking::create([
             'user_id' => $user->id,

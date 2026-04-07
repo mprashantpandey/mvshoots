@@ -2,6 +2,7 @@
 
 namespace App\Http\Resources\API\V1;
 
+use App\Enums\BookingStatus;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
@@ -12,6 +13,9 @@ class BookingResource extends JsonResource
     {
         $actor = $request->user('sanctum');
         $resultsLocked = $actor instanceof User && ! (bool) $this->final_paid;
+
+        $hasRating = $this->relationLoaded('partnerRating') && $this->partnerRating !== null;
+        $isBookingOwner = $actor instanceof User && (int) $this->user_id === (int) $actor->id;
 
         return [
             'id' => (int) $this->id,
@@ -30,7 +34,15 @@ class BookingResource extends JsonResource
             'final_amount' => (float) $this->final_amount,
             'advance_paid' => (bool) $this->advance_paid,
             'final_paid' => (bool) $this->final_paid,
-            'results_count' => (int) $this->results()->count(),
+            'results_count' => (int) ($this->results_count ?? $this->results()->count()),
+            'partner_rating' => $this->when(
+                $hasRating,
+                fn () => new PartnerRatingResource($this->partnerRating)
+            ),
+            'can_rate_partner' => $isBookingOwner
+                && $this->status === BookingStatus::Completed->value
+                && $this->assigned_partner_id !== null,
+            'has_rated_partner' => $isBookingOwner && $hasRating,
             'user' => new ProfileResource($this->whenLoaded('user')),
             'city' => new CityResource($this->whenLoaded('city')),
             'category' => new CategoryResource($this->whenLoaded('category')),

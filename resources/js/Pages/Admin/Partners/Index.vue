@@ -8,11 +8,17 @@ import StatusBadge from '../../../Components/Admin/StatusBadge.vue';
 const props = defineProps({
     partners: Object,
     filters: Object,
+    cities: {
+        type: Array,
+        default: () => [],
+    },
 });
 
 const filters = reactive({
     search: props.filters?.search ?? '',
     status: props.filters?.status ?? '',
+    city_id: props.filters?.city_id ?? '',
+    kyc_status: props.filters?.kyc_status ?? '',
 });
 
 function submitFilters() {
@@ -52,6 +58,17 @@ function toggleStatus(partner) {
                     <option value="active">Active</option>
                     <option value="inactive">Inactive</option>
                 </select>
+                <select v-model="filters.city_id" class="form-select">
+                    <option value="">All cities</option>
+                    <option v-for="city in cities" :key="city.id" :value="String(city.id)">{{ city.name }}</option>
+                </select>
+                <select v-model="filters.kyc_status" class="form-select">
+                    <option value="">All KYC</option>
+                    <option value="not_submitted">Not submitted</option>
+                    <option value="pending">Pending</option>
+                    <option value="verified">Verified</option>
+                    <option value="rejected">Rejected</option>
+                </select>
                 <button class="btn btn-outline-primary" type="submit">Filter</button>
             </form>
         </div>
@@ -63,6 +80,9 @@ function toggleStatus(partner) {
                             <th>Name</th>
                             <th>Phone</th>
                             <th>Email</th>
+                            <th>Cities</th>
+                            <th>KYC</th>
+                            <th>Rating</th>
                             <th>Status</th>
                             <th>Assigned Bookings</th>
                             <th class="text-end">Actions</th>
@@ -73,6 +93,16 @@ function toggleStatus(partner) {
                             <td class="fw-semibold">{{ partner.name }}</td>
                             <td>{{ partner.phone }}</td>
                             <td>{{ partner.email || 'N/A' }}</td>
+                            <td class="small">
+                                <span v-if="partner.service_cities?.length">{{ partner.service_cities.join(', ') }}</span>
+                                <span v-else-if="partner.city_name">{{ partner.city_name }}</span>
+                                <span v-else class="text-secondary">—</span>
+                            </td>
+                            <td><span class="badge text-bg-secondary text-capitalize">{{ (partner.kyc_status || '').replaceAll('_', ' ') }}</span></td>
+                            <td class="small">
+                                <span v-if="partner.ratings_count">{{ partner.rating_average ?? '—' }} / 5 ({{ partner.ratings_count }})</span>
+                                <span v-else class="text-secondary">—</span>
+                            </td>
                             <td><StatusBadge :value="partner.status" /></td>
                             <td>{{ partner.assigned_bookings_count }}</td>
                             <td class="text-end">
@@ -85,7 +115,7 @@ function toggleStatus(partner) {
                             </td>
                         </tr>
                         <tr v-if="!partners.data.length">
-                            <td colspan="6" class="text-center py-5 text-secondary">No partners found.</td>
+                            <td colspan="9" class="text-center py-5 text-secondary">No partners found.</td>
                         </tr>
                     </tbody>
                 </table>

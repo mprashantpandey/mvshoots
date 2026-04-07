@@ -41,6 +41,7 @@ class MobileUtilityApiTest extends TestCase
             'firebase_uid' => 'firebase-partner-one',
             'status' => 'active',
         ]);
+        $this->seedVerifiedPartnerKyc($partner);
 
         $category = Category::create([
             'name' => 'Wedding',
@@ -106,6 +107,7 @@ class MobileUtilityApiTest extends TestCase
             'firebase_uid' => 'firebase-partner-one',
             'status' => 'active',
         ]);
+        $this->seedVerifiedPartnerKyc($partner);
 
         $token = $admin->createToken('admin-dashboard')->plainTextToken;
 

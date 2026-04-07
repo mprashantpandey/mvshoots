@@ -6,6 +6,7 @@ use App\Enums\BookingStatus;
 use App\Models\Booking;
 use App\Models\BookingResult;
 use App\Models\Plan;
+use App\Models\Setting;
 use Illuminate\Database\DatabaseManager;
 use InvalidArgumentException;
 
@@ -14,21 +15,22 @@ class BookingService
     public function __construct(
         private readonly DatabaseManager $db,
         private readonly NotificationService $notificationService,
-    ) {
-    }
+    ) {}
 
     public function create(array $data): Booking
     {
         return $this->db->transaction(function () use ($data): Booking {
             $plan = Plan::findOrFail($data['plan_id']);
             $totalAmount = (float) $plan->price;
+            $advancePercentage = $this->bookingAdvancePercentage();
+            $advanceRatio = $advancePercentage / 100;
 
             $booking = Booking::create([
                 ...$data,
                 'status' => BookingStatus::Pending->value,
                 'total_amount' => $totalAmount,
-                'advance_amount' => round($totalAmount * 0.2, 2),
-                'final_amount' => round($totalAmount * 0.8, 2),
+                'advance_amount' => round($totalAmount * $advanceRatio, 2),
+                'final_amount' => round($totalAmount - round($totalAmount * $advanceRatio, 2), 2),
                 'advance_paid' => false,
                 'final_paid' => false,
             ]);
@@ -147,7 +149,7 @@ class BookingService
             'user',
             (int) $booking->user_id,
             'Final payment pending',
-            'Please complete the remaining 80% payment for your booking.',
+            'Please complete the remaining balance payment for your booking.',
             'final_payment_pending',
             (int) $booking->id
         );
@@ -160,5 +162,12 @@ class BookingService
         );
 
         return $created;
+    }
+
+    private function bookingAdvancePercentage(): float
+    {
+        $configured = (float) Setting::value('booking_advance_percentage', 20);
+
+        return max(1, min(100, $configured));
     }
 }

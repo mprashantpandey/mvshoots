@@ -4,18 +4,34 @@ namespace App\Services;
 
 use App\Enums\BookingStatus;
 use App\Models\Booking;
+use App\Models\Partner;
+use Illuminate\Validation\ValidationException;
 use InvalidArgumentException;
 
 class PartnerAssignmentService
 {
-    public function __construct(private readonly NotificationService $notificationService)
-    {
-    }
+    public function __construct(private readonly NotificationService $notificationService) {}
 
     public function assign(Booking $booking, int $partnerId, mixed $actor, ?string $remarks = null): Booking
     {
         if ($booking->status !== BookingStatus::Confirmed->value) {
             throw new InvalidArgumentException('Only confirmed bookings can be assigned.');
+        }
+
+        $partner = Partner::query()
+            ->with(['serviceCities'])
+            ->findOrFail($partnerId);
+
+        if (! $partner->servesCity($booking->city_id)) {
+            throw ValidationException::withMessages([
+                'partner_id' => ['This partner does not serve the booking city.'],
+            ]);
+        }
+
+        if (! $partner->hasVerifiedKyc()) {
+            throw ValidationException::withMessages([
+                'partner_id' => ['This partner has not completed KYC verification.'],
+            ]);
         }
 
         $booking->update([

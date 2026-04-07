@@ -50,6 +50,11 @@ Route::prefix('admin')->name('admin.')->middleware('auth:admin')->group(function
     Route::resource('partners', PartnerController::class);
     Route::resource('owners', OwnerController::class);
     Route::post('/partners/{partner}/status', [PartnerController::class, 'updateStatus'])->name('partners.update-status');
+    Route::post('/partners/{partner}/kyc/verify', [PartnerController::class, 'verifyKyc'])->name('partners.kyc.verify');
+    Route::post('/partners/{partner}/kyc/reject', [PartnerController::class, 'rejectKyc'])->name('partners.kyc.reject');
+    Route::get('/partners/{partner}/kyc/files/{field}', [PartnerController::class, 'kycFile'])
+        ->name('partners.kyc.file')
+        ->where('field', 'aadhar_front|aadhar_back|pan_image|selfie');
     Route::post('/owners/{owner}/status', [OwnerController::class, 'updateStatus'])->name('owners.update-status');
 
     Route::get('/bookings', [BookingController::class, 'index'])->name('bookings.index');

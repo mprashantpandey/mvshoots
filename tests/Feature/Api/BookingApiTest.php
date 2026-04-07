@@ -5,9 +5,11 @@ namespace Tests\Feature\Api;
 use App\Models\Admin;
 use App\Models\AppNotification;
 use App\Models\Category;
+use App\Models\City;
 use App\Models\Owner;
 use App\Models\Partner;
 use App\Models\Plan;
+use App\Models\Setting;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
@@ -62,6 +64,63 @@ class BookingApiTest extends TestCase
             ->assertCreated()
             ->assertJsonPath('success', true)
             ->assertJsonPath('data.user_id', $user->id);
+    }
+
+    public function test_booking_uses_admin_configured_advance_payment_percentage(): void
+    {
+        Setting::putMany([
+            'booking_advance_percentage' => '35',
+        ]);
+
+        $user = User::create([
+            'name' => 'Configurable Booking User',
+            'phone' => '+911111111112',
+            'email' => 'configurable.booking.user@example.com',
+            'firebase_uid' => 'firebase-configurable-booking-user',
+            'status' => 'active',
+        ]);
+
+        $category = Category::create([
+            'name' => 'Engagement',
+            'description' => 'Engagement shoots',
+            'image' => 'categories/engagement.jpg',
+            'status' => 'active',
+        ]);
+
+        $plan = Plan::create([
+            'category_id' => $category->id,
+            'title' => 'Engagement Signature',
+            'description' => 'Signature package',
+            'price' => 10000,
+            'duration' => '4 hours',
+            'inclusions' => ['Edited photos'],
+            'status' => 'active',
+        ]);
+
+        $token = $user->createToken('test-configurable-user')->plainTextToken;
+
+        $response = $this
+            ->withToken($token)
+            ->postJson('/api/v1/bookings', [
+                'category_id' => $category->id,
+                'plan_id' => $plan->id,
+                'booking_date' => now()->addWeek()->toDateString(),
+                'booking_time' => '11:00',
+                'address' => '123 Config Street',
+            ]);
+
+        $response->assertCreated();
+
+        $this->assertSame(3500.0, (float) $response->json('data.advance_amount'));
+        $this->assertSame(6500.0, (float) $response->json('data.final_amount'));
+
+        $bookingId = $response->json('data.id');
+
+        $this->assertDatabaseHas('bookings', [
+            'id' => $bookingId,
+            'advance_amount' => 3500.00,
+            'final_amount' => 6500.00,
+        ]);
     }
 
     public function test_partner_cannot_create_a_booking(): void
@@ -138,6 +197,7 @@ class BookingApiTest extends TestCase
             'firebase_uid' => 'firebase-lifecycle-partner',
             'status' => 'active',
         ]);
+        $this->seedVerifiedPartnerKyc($partner);
 
         $category = Category::create([
             'name' => 'Maternity',
@@ -371,6 +431,7 @@ class BookingApiTest extends TestCase
             'firebase_uid' => 'firebase-visibility-partner',
             'status' => 'active',
         ]);
+        $this->seedVerifiedPartnerKyc($partner);
 
         $category = Category::create([
             'name' => 'Corporate',
@@ -513,6 +574,7 @@ class BookingApiTest extends TestCase
             'firebase_uid' => 'firebase-cash-partner',
             'status' => 'active',
         ]);
+        $this->seedVerifiedPartnerKyc($partner);
 
         $category = Category::create([
             'name' => 'Studio',
@@ -607,5 +669,84 @@ class BookingApiTest extends TestCase
             ->assertOk()
             ->assertJsonPath('data.results_locked', false)
             ->assertJsonCount(1, 'data.results');
+    }
+
+    public function test_assign_partner_rejects_partner_not_serving_booking_city(): void
+    {
+        $mumbai = City::create(['name' => 'Mumbai', 'status' => 'active', 'sort_order' => 1]);
+        $delhi = City::create(['name' => 'Delhi', 'status' => 'active', 'sort_order' => 2]);
+
+        $user = User::create([
+            'name' => 'City Booking User',
+            'phone' => '+918888888801',
+            'city_id' => $mumbai->id,
+            'status' => 'active',
+        ]);
+
+        $owner = Owner::create([
+            'name' => 'Owner',
+            'email' => 'owner.city@example.com',
+            'password' => bcrypt('password'),
+            'status' => 'active',
+        ]);
+
+        $partnerDelhi = Partner::create([
+            'name' => 'Delhi Partner',
+            'phone' => '+918888888802',
+            'city_id' => $delhi->id,
+            'status' => 'active',
+        ]);
+
+        $category = Category::create([
+            'name' => 'Event',
+            'description' => 'Events',
+            'image' => 'categories/event.jpg',
+            'status' => 'active',
+        ]);
+
+        $plan = Plan::create([
+            'category_id' => $category->id,
+            'title' => 'Mumbai Event',
+            'description' => 'Package',
+            'price' => 5000,
+            'duration' => '2 hours',
+            'inclusions' => ['Photos'],
+            'status' => 'active',
+        ]);
+        $plan->cities()->sync([$mumbai->id]);
+
+        $userToken = $user->createToken('city-booking-user')->plainTextToken;
+        $ownerToken = $owner->createToken('city-owner')->plainTextToken;
+
+        $bookingId = $this->withToken($userToken)
+            ->postJson('/api/v1/bookings', [
+                'category_id' => $category->id,
+                'plan_id' => $plan->id,
+                'booking_date' => now()->addWeek()->toDateString(),
+                'booking_time' => '10:00',
+                'address' => 'Mumbai address',
+            ])
+            ->assertCreated()
+            ->json('data.id');
+
+        $this->assertDatabaseHas('bookings', [
+            'id' => $bookingId,
+            'city_id' => $mumbai->id,
+        ]);
+
+        $this->withToken($userToken)
+            ->postJson('/api/v1/payments/advance', [
+                'booking_id' => $bookingId,
+                'payment_reference' => 'adv_city_test',
+            ])
+            ->assertOk();
+
+        $this->app['auth']->forgetGuards();
+        $this->withToken($ownerToken)
+            ->postJson("/api/v1/bookings/{$bookingId}/assign-partner", [
+                'partner_id' => $partnerDelhi->id,
+            ])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors(['partner_id']);
     }
 }

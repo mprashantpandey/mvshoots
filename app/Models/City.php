@@ -28,6 +28,11 @@ class City extends Model
         return $this->hasMany(Booking::class);
     }
 
+    public function primaryPartners(): HasMany
+    {
+        return $this->hasMany(Partner::class);
+    }
+
     public function categories(): BelongsToMany
     {
         return $this->belongsToMany(Category::class)->withTimestamps();
@@ -36,5 +41,10 @@ class City extends Model
     public function plans(): BelongsToMany
     {
         return $this->belongsToMany(Plan::class)->withTimestamps();
+    }
+
+    public function servicingPartners(): BelongsToMany
+    {
+        return $this->belongsToMany(Partner::class)->withTimestamps();
     }
 }

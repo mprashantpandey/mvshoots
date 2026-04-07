@@ -19,9 +19,7 @@ use Inertia\Response;
 
 class BookingController
 {
-    public function __construct(private readonly PartnerAssignmentService $partnerAssignmentService)
-    {
-    }
+    public function __construct(private readonly PartnerAssignmentService $partnerAssignmentService) {}
 
     public function index(Request $request): Response
     {
@@ -43,7 +41,8 @@ class BookingController
                 ->paginate(15)
                 ->withQueryString()
                 ->through(fn (Booking $booking) => $this->transformBooking($booking)),
-            'partners' => Partner::orderBy('name')
+            'partners' => Partner::query()
+                ->orderBy('name')
                 ->get(['id', 'name'])
                 ->map(fn (Partner $partner) => ['id' => $partner->id, 'name' => $partner->name]),
             'categories' => Category::orderBy('name')
@@ -59,11 +58,14 @@ class BookingController
 
     public function show(Booking $booking): Response
     {
-        $booking->load(['user', 'category', 'plan', 'assignedPartner', 'payments', 'results.partner', 'statusLogs']);
+        $booking->load(['user', 'category', 'plan', 'assignedPartner', 'payments', 'results.partner', 'statusLogs', 'partnerRating.user']);
 
         return Inertia::render('Admin/Bookings/Show', [
             'booking' => $this->transformBooking($booking, true),
-            'partners' => Partner::where('status', 'active')
+            'partners' => Partner::query()
+                ->where('status', 'active')
+                ->kycVerified()
+                ->when($booking->city_id, fn ($query) => $query->servingCity((int) $booking->city_id))
                 ->orderBy('name')
                 ->get(['id', 'name'])
                 ->map(fn (Partner $partner) => ['id' => $partner->id, 'name' => $partner->name]),
@@ -148,6 +150,12 @@ class BookingController
                 'notes' => $result->notes,
                 'created_at' => optional($result->created_at)?->toDateTimeString(),
             ])->values();
+            $payload['partner_rating'] = $booking->partnerRating ? [
+                'rating' => $booking->partnerRating->rating,
+                'review' => $booking->partnerRating->review,
+                'customer_name' => $booking->partnerRating->user?->name,
+                'created_at' => optional($booking->partnerRating->created_at)?->toIso8601String(),
+            ] : null;
         }
 
         return $payload;

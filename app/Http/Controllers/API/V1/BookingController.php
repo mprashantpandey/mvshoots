@@ -8,9 +8,9 @@ use App\Http\Resources\API\V1\BookingResource;
 use App\Http\Resources\API\V1\BookingResultResource;
 use App\Models\Admin;
 use App\Models\Booking;
-use App\Models\Plan;
 use App\Models\Owner;
 use App\Models\Partner;
+use App\Models\Plan;
 use App\Models\User;
 use App\Services\BookingService;
 use App\Services\MediaUploadService;
@@ -27,15 +27,15 @@ class BookingController extends Controller
         private readonly BookingService $bookingService,
         private readonly PartnerAssignmentService $partnerAssignmentService,
         private readonly MediaUploadService $mediaUploadService,
-    ) {
-    }
+    ) {}
 
     public function index(Request $request): JsonResponse
     {
         $actor = $this->requireActor($request, [User::class, Partner::class, Owner::class, Admin::class]);
 
         $query = Booking::query()
-            ->with(['user.managedCity', 'city', 'category', 'plan', 'assignedPartner', 'payments', 'results'])
+            ->with(['user.managedCity', 'city', 'category', 'plan', 'assignedPartner', 'payments', 'results', 'partnerRating'])
+            ->withCount('results')
             ->filter($request->only(['booking_id', 'status', 'date', 'category_id', 'plan_id', 'partner_id', 'payment_status', 'user', 'city_id']))
             ->latest();
 
@@ -81,7 +81,7 @@ class BookingController extends Controller
             'city_id' => $actor->city_id,
         ]);
 
-        return $this->success(new BookingResource($booking->load(['user.managedCity', 'city', 'plan', 'category'])), 'Booking created', 201);
+        return $this->success(new BookingResource($booking->load(['user.managedCity', 'city', 'plan', 'category'])->loadCount('results')), 'Booking created', 201);
     }
 
     public function show(Request $request, Booking $booking): JsonResponse
@@ -90,9 +90,9 @@ class BookingController extends Controller
 
         $this->authorizeBookingAccess($booking, $actor);
 
-        $booking->load(['user.managedCity', 'city', 'category', 'plan', 'assignedPartner', 'statusLogs', 'payments', 'results']);
+        $booking->load(['user.managedCity', 'city', 'category', 'plan', 'assignedPartner', 'statusLogs', 'payments', 'results', 'partnerRating']);
 
-        return $this->success(new BookingResource($booking), 'Booking fetched');
+        return $this->success(new BookingResource($booking->loadCount('results')), 'Booking fetched');
     }
 
     public function assignPartner(Request $request, Booking $booking): JsonResponse
@@ -106,7 +106,7 @@ class BookingController extends Controller
 
         $booking = $this->partnerAssignmentService->assign($booking, $data['partner_id'], $actor, $data['remarks'] ?? null);
 
-        return $this->success(new BookingResource($booking->load(['assignedPartner', 'user', 'category', 'plan'])), 'Partner assigned');
+        return $this->success(new BookingResource($booking->load(['assignedPartner', 'user', 'category', 'plan', 'partnerRating'])->loadCount('results')), 'Partner assigned');
     }
 
     public function updateStatus(Request $request, Booking $booking): JsonResponse
@@ -124,7 +124,7 @@ class BookingController extends Controller
 
         $booking = $this->bookingService->updateStatus($booking, $data['status'], $actor, $data['remarks'] ?? null);
 
-        return $this->success(new BookingResource($booking->load(['assignedPartner', 'user', 'category', 'plan'])), 'Booking status updated');
+        return $this->success(new BookingResource($booking->load(['assignedPartner', 'user', 'category', 'plan', 'partnerRating'])->loadCount('results')), 'Booking status updated');
     }
 
     public function uploadResults(Request $request, Booking $booking): JsonResponse

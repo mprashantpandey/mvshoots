@@ -1,14 +1,17 @@
 <?php
 
-use App\Http\Controllers\API\V1\AuthController;
 use App\Http\Controllers\API\V1\AppConfigController;
+use App\Http\Controllers\API\V1\AuthController;
 use App\Http\Controllers\API\V1\BookingController;
+use App\Http\Controllers\API\V1\BookingRatingController;
 use App\Http\Controllers\API\V1\CategoryController;
 use App\Http\Controllers\API\V1\CityController;
 use App\Http\Controllers\API\V1\NotificationController;
 use App\Http\Controllers\API\V1\OwnerDashboardController;
-use App\Http\Controllers\API\V1\PaymentController;
 use App\Http\Controllers\API\V1\PartnerController;
+use App\Http\Controllers\API\V1\PartnerKycController;
+use App\Http\Controllers\API\V1\PartnerRatingController;
+use App\Http\Controllers\API\V1\PaymentController;
 use App\Http\Controllers\API\V1\PlanController;
 use App\Http\Controllers\API\V1\ReelController;
 use App\Http\Controllers\API\V1\SliderController;
@@ -31,6 +34,10 @@ Route::prefix('v1')->group(function (): void {
             Route::get('/partner/me', [AuthController::class, 'partnerProfile']);
             Route::put('/partner/profile', [AuthController::class, 'updatePartnerProfile']);
             Route::delete('/partner/account', [AuthController::class, 'deletePartnerAccount']);
+            Route::get('/partner/kyc', [PartnerKycController::class, 'show']);
+            Route::post('/partner/kyc', [PartnerKycController::class, 'store']);
+            Route::get('/partner/kyc/files/{field}', [PartnerKycController::class, 'file'])->where('field', '[a-z_]+');
+            Route::get('/partner/ratings', [PartnerRatingController::class, 'index']);
             Route::post('/owner/logout', [AuthController::class, 'ownerLogout']);
             Route::get('/owner/me', [AuthController::class, 'ownerProfile']);
             Route::put('/owner/profile', [AuthController::class, 'updateOwnerProfile']);
@@ -53,6 +60,7 @@ Route::prefix('v1')->group(function (): void {
         Route::post('/bookings', [BookingController::class, 'store']);
         Route::get('/bookings', [BookingController::class, 'index']);
         Route::get('/bookings/{booking}', [BookingController::class, 'show']);
+        Route::post('/bookings/{booking}/rating', [BookingRatingController::class, 'store']);
         Route::post('/bookings/{booking}/assign-partner', [BookingController::class, 'assignPartner']);
         Route::post('/bookings/{booking}/status', [BookingController::class, 'updateStatus']);
         Route::post('/bookings/{booking}/upload-results', [BookingController::class, 'uploadResults']);

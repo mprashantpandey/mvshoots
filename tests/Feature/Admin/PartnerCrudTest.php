@@ -6,6 +6,7 @@ use App\Models\Admin;
 use App\Models\Booking;
 use App\Models\BookingResult;
 use App\Models\Category;
+use App\Models\City;
 use App\Models\Partner;
 use App\Models\Plan;
 use App\Models\User;
@@ -26,11 +27,19 @@ class PartnerCrudTest extends TestCase
 
         $this->actingAs($admin, 'admin');
 
+        $city = City::create([
+            'name' => 'Partner City',
+            'status' => 'active',
+            'sort_order' => 1,
+        ]);
+
         $createResponse = $this->post(route('admin.partners.store'), [
             'name' => 'Lens Crew',
             'phone' => '8888882222',
             'email' => 'partner@example.com',
             'status' => 'active',
+            'city_id' => $city->id,
+            'service_city_ids' => [$city->id],
         ]);
 
         $createResponse->assertRedirect(route('admin.partners.index'));
@@ -38,12 +47,18 @@ class PartnerCrudTest extends TestCase
         $partner = Partner::firstOrFail();
 
         $this->assertSame('Lens Crew', $partner->name);
+        $this->assertDatabaseHas('city_partner', [
+            'partner_id' => $partner->id,
+            'city_id' => $city->id,
+        ]);
 
         $updateResponse = $this->put(route('admin.partners.update', $partner), [
             'name' => 'Lens Crew Plus',
             'phone' => '8888882222',
             'email' => 'partner-plus@example.com',
             'status' => 'inactive',
+            'city_id' => $city->id,
+            'service_city_ids' => [$city->id],
         ]);
 
         $updateResponse->assertRedirect(route('admin.partners.index'));

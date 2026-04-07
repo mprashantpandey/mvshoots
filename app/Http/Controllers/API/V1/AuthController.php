@@ -88,9 +88,13 @@ class AuthController extends Controller
             'phone' => ['required', 'string', 'max:20'],
             'name' => ['nullable', 'string', 'max:255'],
             'email' => ['nullable', 'email'],
+            'city' => ['nullable', 'string', 'max:255'],
+            'city_id' => ['nullable', 'exists:cities,id'],
             'firebase_uid' => ['nullable', 'string', 'max:255'],
             'status' => ['nullable', 'string', 'max:50'],
         ]);
+
+        $resolvedCity = $this->resolveCityPayload($data);
 
         $partner = Partner::where('phone', $data['phone'])->first();
 
@@ -98,13 +102,14 @@ class AuthController extends Controller
             $partner->fill(array_filter([
                 'name' => $data['name'] ?? null,
                 'email' => $data['email'] ?? null,
+                'city_id' => $resolvedCity['id'] ?? null,
                 'firebase_uid' => $data['firebase_uid'] ?? null,
                 'status' => $data['status'] ?? null,
             ], fn ($value) => filled($value)))->save();
 
             return $this->success([
                 'token' => $this->issueToken($partner->fresh(), 'partner-app'),
-                'partner' => new ProfileResource($partner->fresh()),
+                'partner' => new ProfileResource($this->hydratePartnerForProfile($partner->fresh())),
                 'is_new' => false,
                 'requires_registration' => false,
             ], 'Partner logged in');
@@ -125,13 +130,14 @@ class AuthController extends Controller
             'name' => $data['name'],
             'phone' => $data['phone'],
             'email' => $data['email'] ?? null,
+            'city_id' => $resolvedCity['id'] ?? null,
             'firebase_uid' => $data['firebase_uid'] ?? null,
             'status' => $data['status'] ?? 'active',
         ]);
 
         return $this->success([
             'token' => $this->issueToken($partner, 'partner-app'),
-            'partner' => new ProfileResource($partner),
+            'partner' => new ProfileResource($this->hydratePartnerForProfile($partner->load(['managedCity', 'serviceCities', 'kyc']))),
             'is_new' => true,
             'requires_registration' => false,
         ], 'Partner profile synced');
@@ -175,6 +181,16 @@ class AuthController extends Controller
 
         abort_unless($actor instanceof User || $actor instanceof Partner || $actor instanceof Owner || $actor instanceof Admin, 403, 'You are not authenticated.');
 
+        if ($actor instanceof User || $actor instanceof Partner) {
+            $actor->loadMissing(['managedCity']);
+        }
+
+        if ($actor instanceof Partner) {
+            $actor->loadMissing(['serviceCities', 'kyc']);
+            $actor->loadCount('ratings');
+            $actor->loadAvg('ratings', 'rating');
+        }
+
         return $this->success([
             'actor_type' => match (true) {
                 $actor instanceof User => 'user',
@@ -216,6 +232,10 @@ class AuthController extends Controller
         $actor = $request->user('sanctum');
 
         abort_unless($actor instanceof Partner, 403, 'Only partners can access this profile.');
+
+        $actor->load(['managedCity', 'serviceCities', 'kyc']);
+        $actor->loadCount('ratings');
+        $actor->loadAvg('ratings', 'rating');
 
         return $this->success(new ProfileResource($actor), 'Partner profile');
     }
@@ -276,11 +296,29 @@ class AuthController extends Controller
         $data = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'email' => ['nullable', 'email'],
+            'city' => ['nullable', 'string', 'max:255'],
+            'city_id' => ['nullable', 'exists:cities,id'],
+            'service_city_ids' => ['nullable', 'array'],
+            'service_city_ids.*' => ['integer', 'exists:cities,id'],
         ]);
 
-        $actor->update($data);
+        $resolvedCity = $this->resolveCityPayload($data);
 
-        return $this->success(new ProfileResource($actor->fresh()), 'Partner profile updated');
+        $actor->update([
+            'name' => $data['name'],
+            'email' => $data['email'] ?? null,
+            'city_id' => $resolvedCity['id'] ?? null,
+        ]);
+
+        if ($request->has('service_city_ids')) {
+            $actor->serviceCities()->sync($data['service_city_ids'] ?? []);
+        }
+
+        $fresh = $actor->fresh()->load(['managedCity', 'serviceCities', 'kyc']);
+        $fresh->loadCount('ratings');
+        $fresh->loadAvg('ratings', 'rating');
+
+        return $this->success(new ProfileResource($fresh), 'Partner profile updated');
     }
 
     public function deletePartnerAccount(Request $request): JsonResponse
@@ -374,6 +412,14 @@ class AuthController extends Controller
         $authenticatable->tokens()->delete();
 
         return $authenticatable->createToken($tokenName)->plainTextToken;
+    }
+
+    private function hydratePartnerForProfile(Partner $partner): Partner
+    {
+        $partner->loadCount('ratings');
+        $partner->loadAvg('ratings', 'rating');
+
+        return $partner;
     }
 
     private function resolveCityPayload(array $data): array

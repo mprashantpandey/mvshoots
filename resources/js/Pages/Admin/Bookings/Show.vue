@@ -110,6 +110,21 @@ function headline(value) {
             </div>
         </div>
 
+        <div v-if="booking.partner_rating" class="row g-4 mb-4">
+            <div class="col-12">
+                <div class="glass-card p-4">
+                    <h3 class="h6 mb-3">Customer rating</h3>
+                    <div class="d-flex align-items-baseline flex-wrap gap-2 mb-2">
+                        <span class="fs-4 fw-semibold">{{ booking.partner_rating.rating }} / 5</span>
+                        <span class="text-secondary small">from {{ booking.partner_rating.customer_name || 'Customer' }}</span>
+                    </div>
+                    <p v-if="booking.partner_rating.review" class="mb-0">{{ booking.partner_rating.review }}</p>
+                    <p v-else class="text-secondary small mb-0">No written review.</p>
+                    <p class="small text-secondary mt-2 mb-0">{{ booking.partner_rating.created_at }}</p>
+                </div>
+            </div>
+        </div>
+
         <div class="row g-4">
             <div class="col-lg-4">
                 <div class="table-card h-100">

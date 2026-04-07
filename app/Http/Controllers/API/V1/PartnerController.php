@@ -22,15 +22,15 @@ class PartnerController extends Controller
         abort_unless($actor instanceof Owner || $actor instanceof Admin, 403, 'Only admins can view partners.');
 
         $partners = Partner::query()
-            ->when($request->filled('status'), fn ($query) => $query->where('status', $request->string('status')))
-            ->when($request->filled('search'), function ($query) use ($request): void {
-                $search = $request->string('search')->toString();
-                $query->where(function ($nested) use ($search): void {
-                    $nested->where('name', 'like', "%{$search}%")
-                        ->orWhere('phone', 'like', "%{$search}%")
-                        ->orWhere('email', 'like', "%{$search}%");
-                });
-            })
+            ->kycVerified()
+            ->with(['managedCity', 'serviceCities'])
+            ->withAvg('ratings', 'rating')
+            ->withCount('ratings')
+            ->filter([
+                'search' => $request->filled('search') ? $request->string('search')->toString() : null,
+                'status' => $request->filled('status') ? $request->string('status')->toString() : null,
+                'city_id' => $request->filled('city_id') ? $request->integer('city_id') : null,
+            ])
             ->withCount('assignedBookings')
             ->orderBy('name')
             ->paginate(20);
