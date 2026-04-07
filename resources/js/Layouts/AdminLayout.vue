@@ -32,6 +32,7 @@ const links = [
     { href: '/admin/payments', label: 'Payments', icon: 'bi-credit-card-2-front' },
     { href: '/admin/users', label: 'Users', icon: 'bi-people' },
     { href: '/admin/partners', label: 'Partners', icon: 'bi-camera-reels' },
+    { href: '/admin/partners/kyc/pending', label: 'Partner KYC', icon: 'bi-shield-check' },
     { href: '/admin/owners', label: 'Owners', icon: 'bi-person-badge' },
     { href: '/admin/notifications', label: 'Notifications', icon: 'bi-bell' },
     { href: '/admin/reports', label: 'Reports', icon: 'bi-bar-chart' },
@@ -39,7 +40,20 @@ const links = [
 ];
 
 function isActive(href) {
-    return currentUrl.value === href || currentUrl.value.startsWith(`${href}/`);
+    const url = currentUrl.value.split('?')[0] ?? '';
+
+    if (href === '/admin/partners/kyc/pending') {
+        return url === href;
+    }
+
+    if (href === '/admin/partners') {
+        return (
+            url === href ||
+            (url.startsWith('/admin/partners/') && !url.startsWith('/admin/partners/kyc'))
+        );
+    }
+
+    return url === href || url.startsWith(`${href}/`);
 }
 
 function logout() {
@@ -158,15 +172,20 @@ function logout() {
         id="mobileSidebar"
         aria-labelledby="mobileSidebarLabel"
     >
-        <div class="offcanvas-header border-bottom border-secondary">
-            <div class="d-flex align-items-center gap-2">
-                <div class="brand-mark brand-mark--sm"><i class="bi bi-camera-fill"></i></div>
-                <div>
-                    <h5 class="offcanvas-title mb-0" id="mobileSidebarLabel">{{ appName }}</h5>
-                    <div class="small text-secondary">Menu</div>
+        <div class="offcanvas-header">
+            <div class="d-flex align-items-center gap-2 min-w-0">
+                <div class="brand-mark brand-mark--sm flex-shrink-0"><i class="bi bi-camera-fill"></i></div>
+                <div class="min-w-0">
+                    <h5 class="offcanvas-title mb-0 text-truncate" id="mobileSidebarLabel">{{ appName }}</h5>
+                    <div class="mobile-sidebar-tagline">Menu</div>
                 </div>
             </div>
-            <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+            <button
+                type="button"
+                class="btn-close btn-close-white"
+                data-bs-dismiss="offcanvas"
+                aria-label="Close"
+            ></button>
         </div>
         <div class="offcanvas-body pt-3">
             <nav class="nav flex-column">

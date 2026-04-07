@@ -2,9 +2,11 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Enums\PartnerKycStatus;
 use App\Models\Booking;
 use App\Models\Category;
 use App\Models\Partner;
+use App\Models\PartnerKyc;
 use App\Models\Payment;
 use App\Models\Plan;
 use App\Models\Reel;
@@ -56,6 +58,7 @@ class DashboardController
             'totalReels' => Reel::count(),
             'totalRevenue' => Payment::where('payment_status', 'paid')->sum('amount'),
             'pendingPayments' => Payment::where('payment_status', 'pending')->count(),
+            'pendingKycCount' => PartnerKyc::where('status', PartnerKycStatus::Pending)->count(),
             'recentBookings' => $recentBookings->map(fn (Booking $booking) => [
                 'id' => $booking->id,
                 'user_name' => $booking->user?->name,

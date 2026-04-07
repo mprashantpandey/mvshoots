@@ -16,6 +16,42 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class PartnerController
 {
+    /**
+     * Partners with KYC status pending (awaiting admin review).
+     */
+    public function pendingKyc(Request $request): Response
+    {
+        $filters = $request->only(['search']);
+
+        $query = Partner::query()
+            ->join('partner_kyc', 'partners.id', '=', 'partner_kyc.partner_id')
+            ->where('partner_kyc.status', PartnerKycStatus::Pending->value)
+            ->select('partners.*')
+            ->when(
+                $request->filled('search'),
+                function ($q) use ($request): void {
+                    $term = '%'.$request->string('search')->toString().'%';
+                    $q->where(function ($inner) use ($term): void {
+                        $inner->where('partners.name', 'like', $term)
+                            ->orWhere('partners.phone', 'like', $term)
+                            ->orWhere('partners.email', 'like', $term);
+                    });
+                }
+            )
+            ->with(['managedCity', 'serviceCities', 'kyc'])
+            ->withAvg('ratings', 'rating')
+            ->withCount(['assignedBookings', 'ratings'])
+            ->orderByDesc('partner_kyc.submitted_at');
+
+        return Inertia::render('Admin/Partners/KycPending', [
+            'partners' => $query
+                ->paginate(20)
+                ->withQueryString()
+                ->through(fn (Partner $partner) => $this->transformPartner($partner)),
+            'filters' => $filters,
+        ]);
+    }
+
     public function index(Request $request): Response
     {
         $filters = $request->only(['search', 'status', 'city_id', 'kyc_status']);
@@ -199,6 +235,8 @@ class PartnerController
             'reject_kyc_url' => ($partner->kyc?->status === PartnerKycStatus::Pending)
                 ? route('admin.partners.kyc.reject', $partner)
                 : null,
+            'kyc_submitted_at' => $partner->kyc?->submitted_at?->format('d M Y, H:i'),
+            'kyc_submitted_at_iso' => $partner->kyc?->submitted_at?->toIso8601String(),
             'rating_average' => $partner->ratings_avg_rating !== null
                 ? round((float) $partner->ratings_avg_rating, 2)
                 : null,

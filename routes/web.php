@@ -47,6 +47,7 @@ Route::prefix('admin')->name('admin.')->middleware('auth:admin')->group(function
     Route::resource('plans', PlanController::class);
     Route::resource('reels', ReelController::class);
     Route::resource('sliders', SliderController::class)->except(['show']);
+    Route::get('/partners/kyc/pending', [PartnerController::class, 'pendingKyc'])->name('partners.kyc.pending');
     Route::resource('partners', PartnerController::class);
     Route::resource('owners', OwnerController::class);
     Route::post('/partners/{partner}/status', [PartnerController::class, 'updateStatus'])->name('partners.update-status');

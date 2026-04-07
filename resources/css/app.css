@@ -300,6 +300,11 @@ body {
     height: 100%;
 }
 
+a.stat-card-link:hover .stat-card {
+    border-color: rgba(37, 99, 235, 0.35);
+    box-shadow: 0 28px 56px rgba(15, 23, 42, 0.12);
+}
+
 .stat-icon {
     width: 3rem;
     height: 3rem;
@@ -365,8 +370,54 @@ textarea.form-control {
 }
 
 .mobile-sidebar {
-    background: rgba(15, 23, 42, 0.98);
+    background: linear-gradient(180deg, #0f172a 0%, #111827 55%, #172033 100%);
     color: #fff;
+}
+
+/* Match drawer header to body (avoid inherited white text on light header bug). */
+.mobile-sidebar .offcanvas-header {
+    background: linear-gradient(180deg, #0f172a, #111827);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
+    padding: 1rem 1.1rem;
+}
+
+.mobile-sidebar .offcanvas-title {
+    color: #fff;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+}
+
+.mobile-sidebar .mobile-sidebar-tagline {
+    color: rgba(255, 255, 255, 0.55);
+    font-size: 0.8rem;
+    margin-top: 0.15rem;
+}
+
+.mobile-sidebar .offcanvas-body {
+    padding-top: 0.75rem;
+    padding-bottom: 1.5rem;
+}
+
+/* Same link treatment as desktop sidebar (mobile nav was unscoped). */
+.mobile-sidebar .nav-link {
+    color: rgba(255, 255, 255, 0.78);
+    border-radius: 16px;
+    padding: 0.8rem 0.95rem;
+    display: flex;
+    gap: 0.85rem;
+    align-items: center;
+    margin-bottom: 0.35rem;
+    text-decoration: none;
+}
+
+.mobile-sidebar .nav-link.active,
+.mobile-sidebar .nav-link:hover {
+    color: #fff;
+    background: rgba(255, 255, 255, 0.08);
+}
+
+.mobile-sidebar .nav-link i {
+    opacity: 0.95;
 }
 
 .avatar-circle {
@@ -543,10 +594,6 @@ textarea.form-control {
     height: 2rem;
     border-radius: 12px;
     font-size: 0.95rem;
-}
-
-.mobile-sidebar .offcanvas-header {
-    background: rgba(248, 250, 252, 0.98);
 }
 
 @media (min-width: 992px) {

@@ -49,7 +49,12 @@ function toggleStatus(partner) {
                     <h2 class="h5 mb-1">Partner Management</h2>
                     <p class="text-secondary mb-0">Create, update, and monitor shoot partners.</p>
                 </div>
-                <Link href="/admin/partners/create" class="btn btn-primary">Add Partner</Link>
+                <div class="d-flex flex-wrap gap-2">
+                    <Link href="/admin/partners/kyc/pending" class="btn btn-outline-primary">
+                        <i class="bi bi-shield-check me-1"></i>Partner KYC
+                    </Link>
+                    <Link href="/admin/partners/create" class="btn btn-primary">Add Partner</Link>
+                </div>
             </div>
             <form class="filter-grid mt-4" @submit.prevent="submitFilters">
                 <input v-model="filters.search" class="form-control" placeholder="Search name, phone, email">

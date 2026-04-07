@@ -2,12 +2,14 @@
 
 namespace Tests\Feature\Admin;
 
+use App\Enums\PartnerKycStatus;
 use App\Models\Admin;
 use App\Models\Booking;
 use App\Models\BookingResult;
 use App\Models\Category;
 use App\Models\City;
 use App\Models\Partner;
+use App\Models\PartnerKyc;
 use App\Models\Plan;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -141,5 +143,58 @@ class PartnerCrudTest extends TestCase
         $this->get(route('admin.partners.create'))->assertOk();
         $this->get(route('admin.partners.show', $partner))->assertOk();
         $this->get(route('admin.partners.edit', $partner))->assertOk();
+    }
+
+    public function test_admin_kyc_queue_lists_only_pending_kyc_partners(): void
+    {
+        $admin = Admin::create([
+            'name' => 'Platform Admin',
+            'email' => 'admin@vmshoot.test',
+            'password' => bcrypt('password'),
+        ]);
+
+        $city = City::create([
+            'name' => 'Queue City',
+            'status' => 'active',
+            'sort_order' => 1,
+        ]);
+
+        $pending = Partner::create([
+            'name' => 'Pending Partner',
+            'phone' => '9111111111',
+            'email' => 'pending@example.com',
+            'status' => 'active',
+            'city_id' => $city->id,
+        ]);
+
+        PartnerKyc::create([
+            'partner_id' => $pending->id,
+            'aadhar_number' => '123456789012',
+            'aadhar_front_path' => 'kyc/test/front.jpg',
+            'aadhar_back_path' => 'kyc/test/back.jpg',
+            'pan_number' => 'ABCDE1234F',
+            'pan_image_path' => 'kyc/test/pan.jpg',
+            'selfie_path' => 'kyc/test/selfie.jpg',
+            'status' => PartnerKycStatus::Pending,
+            'submitted_at' => now(),
+        ]);
+
+        $verified = Partner::create([
+            'name' => 'Verified Partner',
+            'phone' => '9222222222',
+            'email' => 'verified@example.com',
+            'status' => 'active',
+            'city_id' => $city->id,
+        ]);
+        $this->seedVerifiedPartnerKyc($verified);
+
+        $this->actingAs($admin, 'admin');
+
+        $this->get(route('admin.partners.kyc.pending'))
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page
+                ->component('Admin/Partners/KycPending')
+                ->has('partners.data', 1)
+                ->where('partners.data.0.id', $pending->id));
     }
 }

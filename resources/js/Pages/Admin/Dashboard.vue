@@ -17,6 +17,7 @@ const props = defineProps({
     pendingBookings: Number,
     completedBookings: Number,
     pendingPayments: Number,
+    pendingKycCount: Number,
     recentBookings: Array,
     recentPayments: Array,
     bookingChart: Array,
@@ -119,7 +120,16 @@ onBeforeUnmount(() => {
         <div class="row g-4 mb-4">
             <div class="col-md-4"><StatCard label="Pending Bookings" :value="props.pendingBookings" icon="bi-clock-history" /></div>
             <div class="col-md-4"><StatCard label="Completed Bookings" :value="props.completedBookings" icon="bi-patch-check" /></div>
-            <div class="col-md-4"><StatCard label="Service status" value="Operational" hint="APIs and payouts connected" icon="bi-activity" /></div>
+            <div class="col-md-4">
+                <Link href="/admin/partners/kyc/pending" class="text-decoration-none text-reset d-block h-100 stat-card-link">
+                    <StatCard
+                        label="Partner KYC pending"
+                        :value="props.pendingKycCount"
+                        icon="bi-shield-check"
+                        hint="Tap to open review queue"
+                    />
+                </Link>
+            </div>
         </div>
 
         <div class="row g-4">
