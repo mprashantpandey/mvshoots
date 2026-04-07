@@ -33,8 +33,8 @@ class PartnerAssignmentService
         $this->notificationService->create(
             'partner',
             $partnerId,
-            'New booking assigned',
-            "You have been assigned booking #{$booking->id}.",
+            'New order assigned',
+            "You have a new order: booking #{$booking->id}.",
             'booking_assigned',
             (int) $booking->id
         );

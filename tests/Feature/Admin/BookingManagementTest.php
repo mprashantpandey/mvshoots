@@ -4,6 +4,7 @@ namespace Tests\Feature\Admin;
 
 use App\Enums\BookingStatus;
 use App\Models\Admin;
+use App\Models\AppNotification;
 use App\Models\Booking;
 use App\Models\Category;
 use App\Models\Partner;
@@ -84,6 +85,13 @@ class BookingManagementTest extends TestCase
 
         $this->assertSame($partner->id, $booking->assigned_partner_id);
         $this->assertSame(BookingStatus::Assigned->value, $booking->status);
+        $this->assertDatabaseHas('notifications', [
+            'user_type' => 'partner',
+            'user_id' => $partner->id,
+            'type' => 'booking_assigned',
+            'reference_id' => $booking->id,
+            'title' => 'New order assigned',
+        ]);
 
         $statusResponse = $this->post(route('admin.bookings.update-status', $booking), [
             'status' => BookingStatus::Accepted->value,
