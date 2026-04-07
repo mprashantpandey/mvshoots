@@ -1,4 +1,5 @@
 #!/bin/zsh
+# Deploy Laravel backend to cPanel: repo at REMOTE_ROOT, web root REMOTE_PUBLIC (SSH).
 set -euo pipefail
 
 SERVER="mvshoots@mvshoots.com"
@@ -9,14 +10,18 @@ REMOTE_PUBLIC="/home5/mvshoots/public_html"
 echo "Pushing backend to origin/main..."
 git push origin main
 
-echo "Deploying on server..."
+echo "Deploying on cPanel host via SSH (${SERVER}:${PORT})..."
 ssh -p "$PORT" "$SERVER" "
   set -e
   cd '$REMOTE_ROOT'
   git fetch origin main
   git reset --hard origin/main
   rm -f public/hot '$REMOTE_PUBLIC/hot'
+  if command -v composer >/dev/null 2>&1; then
+    composer install --no-dev --no-interaction --optimize-autoloader
+  fi
   npm run build
+  php artisan migrate --force
   php artisan optimize:clear
   php artisan optimize
   rsync -a --delete public/build/ '$REMOTE_PUBLIC/build/'
