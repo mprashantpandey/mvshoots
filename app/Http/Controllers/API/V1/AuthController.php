@@ -5,6 +5,7 @@ namespace App\Http\Controllers\API\V1;
 use App\Http\Controllers\API\V1\Concerns\ApiResponse;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\API\V1\ProfileResource;
+use App\Models\Admin;
 use App\Models\AppNotification;
 use App\Models\DeviceToken;
 use App\Models\Owner;
@@ -137,30 +138,40 @@ class AuthController extends Controller
 
         $owner = Owner::where('email', $data['email'])->first();
 
-        if (! $owner || ! Hash::check($data['password'], $owner->password)) {
-            throw ValidationException::withMessages([
-                'email' => ['Invalid credentials.'],
-            ]);
+        if ($owner && Hash::check($data['password'], $owner->password)) {
+            return $this->success([
+                'token' => $owner->createToken('owner-app')->plainTextToken,
+                'owner' => new ProfileResource($owner),
+                'actor_type' => 'owner',
+            ], 'Owner logged in');
         }
 
-        $token = $owner->createToken('owner-app')->plainTextToken;
+        $admin = Admin::where('email', $data['email'])->first();
 
-        return $this->success([
-            'token' => $token,
-            'owner' => new ProfileResource($owner),
-        ], 'Owner logged in');
+        if ($admin && Hash::check($data['password'], $admin->password)) {
+            return $this->success([
+                'token' => $admin->createToken('admin-app')->plainTextToken,
+                'owner' => new ProfileResource($admin),
+                'actor_type' => 'admin',
+            ], 'Admin logged in');
+        }
+
+        throw ValidationException::withMessages([
+            'email' => ['Invalid credentials.'],
+        ]);
     }
 
     public function me(Request $request): JsonResponse
     {
         $actor = $request->user('sanctum');
 
-        abort_unless($actor instanceof User || $actor instanceof Partner || $actor instanceof Owner, 403, 'You are not authenticated.');
+        abort_unless($actor instanceof User || $actor instanceof Partner || $actor instanceof Owner || $actor instanceof Admin, 403, 'You are not authenticated.');
 
         return $this->success([
             'actor_type' => match (true) {
                 $actor instanceof User => 'user',
                 $actor instanceof Partner => 'partner',
+                $actor instanceof Admin => 'admin',
                 default => 'owner',
             },
             'profile' => new ProfileResource($actor),
@@ -178,7 +189,7 @@ class AuthController extends Controller
     {
         $actor = $request->user('sanctum');
 
-        abort_unless($actor instanceof Owner, 403, 'Only owners can access this profile.');
+        abort_unless($actor instanceof Owner || $actor instanceof Admin, 403, 'Only admins can access this profile.');
 
         return $this->success(new ProfileResource($actor), 'Owner profile');
     }
@@ -260,7 +271,7 @@ class AuthController extends Controller
     {
         $actor = $request->user('sanctum');
 
-        abort_unless($actor instanceof Owner, 403, 'Only owners can update this profile.');
+        abort_unless($actor instanceof Owner || $actor instanceof Admin, 403, 'Only admins can update this profile.');
 
         $data = $request->validate([
             'name' => ['required', 'string', 'max:255'],

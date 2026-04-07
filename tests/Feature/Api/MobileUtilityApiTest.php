@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Api;
 
+use App\Models\Admin;
 use App\Models\AppNotification;
 use App\Models\Booking;
 use App\Models\Category;
@@ -88,6 +89,34 @@ class MobileUtilityApiTest extends TestCase
             ->assertOk()
             ->assertJsonPath('data.data.0.id', $partner->id)
             ->assertJsonPath('data.data.0.name', 'Partner One');
+    }
+
+    public function test_admin_can_fetch_dashboard_and_partner_list(): void
+    {
+        $admin = Admin::create([
+            'name' => 'Admin',
+            'email' => 'admin@vmshoot.test',
+            'password' => bcrypt('password'),
+        ]);
+
+        $partner = Partner::create([
+            'name' => 'Partner One',
+            'phone' => '+911234567001',
+            'email' => 'partner.one@example.com',
+            'firebase_uid' => 'firebase-partner-one',
+            'status' => 'active',
+        ]);
+
+        $token = $admin->createToken('admin-dashboard')->plainTextToken;
+
+        $this->withToken($token)
+            ->getJson('/api/v1/owner/dashboard')
+            ->assertOk();
+
+        $this->withToken($token)
+            ->getJson('/api/v1/partners')
+            ->assertOk()
+            ->assertJsonPath('data.data.0.id', $partner->id);
     }
 
     public function test_user_can_create_payment_intents_and_mark_notifications_read(): void

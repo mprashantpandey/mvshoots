@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Api;
 
+use App\Models\Admin;
 use App\Models\Owner;
 use App\Models\Partner;
 use App\Models\User;
@@ -111,6 +112,12 @@ class AuthApiTest extends TestCase
             'status' => 'active',
         ]);
 
+        $admin = Admin::create([
+            'name' => 'Profile Admin',
+            'email' => 'profile.admin@example.com',
+            'password' => bcrypt('password'),
+        ]);
+
         $this->withToken($user->createToken('user-profile')->plainTextToken)
             ->getJson('/api/v1/auth/me')
             ->assertOk()
@@ -142,6 +149,29 @@ class AuthApiTest extends TestCase
             ])
             ->assertOk()
             ->assertJsonPath('data.name', 'Updated Owner');
+
+        $this->app['auth']->forgetGuards();
+        $this->withToken($admin->createToken('admin-profile')->plainTextToken)
+            ->getJson('/api/v1/auth/me')
+            ->assertOk()
+            ->assertJsonPath('data.actor_type', 'admin');
+    }
+
+    public function test_admin_can_login_through_owner_app_endpoint(): void
+    {
+        Admin::create([
+            'name' => 'Mobile Admin',
+            'email' => 'mobile.admin@example.com',
+            'password' => bcrypt('password'),
+        ]);
+
+        $this->postJson('/api/v1/auth/owner/login', [
+            'email' => 'mobile.admin@example.com',
+            'password' => 'password',
+        ])
+            ->assertOk()
+            ->assertJsonPath('data.actor_type', 'admin')
+            ->assertJsonPath('data.owner.email', 'mobile.admin@example.com');
     }
 
     public function test_authenticated_user_can_delete_account(): void
