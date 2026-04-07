@@ -5,6 +5,7 @@ namespace App\Http\Controllers\API\V1;
 use App\Http\Controllers\API\V1\Concerns\ApiResponse;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\API\V1\ProfileResource;
+use App\Models\Admin;
 use App\Models\Owner;
 use App\Models\Partner;
 use Illuminate\Http\JsonResponse;
@@ -18,7 +19,7 @@ class PartnerController extends Controller
     {
         $actor = $request->user('sanctum');
 
-        abort_unless($actor instanceof Owner, 403, 'Only owners can view partners.');
+        abort_unless($actor instanceof Owner || $actor instanceof Admin, 403, 'Only admins can view partners.');
 
         $partners = Partner::query()
             ->when($request->filled('status'), fn ($query) => $query->where('status', $request->string('status')))

@@ -8,6 +8,7 @@ use App\Http\Controllers\API\V1\Concerns\ApiResponse;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\API\V1\BookingResource;
 use App\Http\Resources\API\V1\PaymentResource;
+use App\Models\Admin;
 use App\Models\Booking;
 use App\Models\Owner;
 use App\Models\Partner;
@@ -24,7 +25,7 @@ class OwnerDashboardController extends Controller
     {
         $actor = $request->user('sanctum');
 
-        abort_unless($actor instanceof Owner, 403, 'Only owners can access the dashboard.');
+        abort_unless($actor instanceof Owner || $actor instanceof Admin, 403, 'Only admins can access the dashboard.');
 
         $recentBookings = Booking::query()
             ->with(['user', 'category', 'plan', 'assignedPartner'])

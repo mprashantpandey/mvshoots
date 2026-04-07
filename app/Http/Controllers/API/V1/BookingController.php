@@ -6,14 +6,17 @@ use App\Http\Controllers\API\V1\Concerns\ApiResponse;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\API\V1\BookingResource;
 use App\Http\Resources\API\V1\BookingResultResource;
+use App\Models\Admin;
 use App\Models\Booking;
 use App\Models\Owner;
 use App\Models\Partner;
 use App\Models\User;
 use App\Services\BookingService;
+use App\Services\MediaUploadService;
 use App\Services\PartnerAssignmentService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 
 class BookingController extends Controller
 {
@@ -22,12 +25,13 @@ class BookingController extends Controller
     public function __construct(
         private readonly BookingService $bookingService,
         private readonly PartnerAssignmentService $partnerAssignmentService,
+        private readonly MediaUploadService $mediaUploadService,
     ) {
     }
 
     public function index(Request $request): JsonResponse
     {
-        $actor = $this->requireActor($request, [User::class, Partner::class, Owner::class]);
+        $actor = $this->requireActor($request, [User::class, Partner::class, Owner::class, Admin::class]);
 
         $query = Booking::query()
             ->with(['user', 'category', 'plan', 'assignedPartner', 'payments', 'results'])
@@ -70,7 +74,7 @@ class BookingController extends Controller
 
     public function show(Request $request, Booking $booking): JsonResponse
     {
-        $actor = $this->requireActor($request, [User::class, Partner::class, Owner::class]);
+        $actor = $this->requireActor($request, [User::class, Partner::class, Owner::class, Admin::class]);
 
         $this->authorizeBookingAccess($booking, $actor);
 
@@ -81,7 +85,7 @@ class BookingController extends Controller
 
     public function assignPartner(Request $request, Booking $booking): JsonResponse
     {
-        $actor = $this->requireActor($request, [Owner::class]);
+        $actor = $this->requireActor($request, [Owner::class, Admin::class]);
 
         $data = $request->validate([
             'partner_id' => ['required', 'exists:partners,id'],
@@ -95,7 +99,7 @@ class BookingController extends Controller
 
     public function updateStatus(Request $request, Booking $booking): JsonResponse
     {
-        $actor = $this->requireActor($request, [Partner::class, Owner::class]);
+        $actor = $this->requireActor($request, [Partner::class, Owner::class, Admin::class]);
 
         if ($actor instanceof Partner && (int) $booking->assigned_partner_id !== (int) $actor->id) {
             abort(403, 'You can only update bookings assigned to you.');
@@ -120,18 +124,40 @@ class BookingController extends Controller
         }
 
         $data = $request->validate([
-            'results' => ['required', 'array', 'min:1'],
-            'results.*.file_url' => ['required', 'url'],
-            'results.*.file_type' => ['required', 'in:photo,video'],
+            'results' => ['nullable', 'array', 'min:1'],
+            'results.*.file_url' => ['required_with:results', 'url'],
+            'results.*.file_type' => ['required_with:results', 'in:photo,video'],
             'results.*.notes' => ['nullable', 'string'],
+            'file' => ['nullable', 'file', 'max:51200', 'mimetypes:image/jpeg,image/png,image/webp,video/mp4,video/quicktime,video/webm'],
+            'file_type' => ['required_without:results', 'nullable', 'in:photo,video'],
+            'notes' => ['nullable', 'string'],
         ]);
 
-        $results = $this->bookingService->uploadResults($booking, $actor->id, $data['results']);
+        $resultsPayload = $data['results'] ?? null;
+
+        if ($request->hasFile('file')) {
+            $path = $this->mediaUploadService->upload(
+                $request->file('file'),
+                "booking-results/{$booking->id}"
+            );
+
+            $resultsPayload = [[
+                'file_url' => Storage::disk('public')->url((string) $path),
+                'file_type' => $data['file_type'],
+                'notes' => $data['notes'] ?? null,
+            ]];
+        }
+
+        if (empty($resultsPayload)) {
+            abort(422, 'Upload at least one result.');
+        }
+
+        $results = $this->bookingService->uploadResults($booking, $actor->id, $resultsPayload);
 
         return $this->success(BookingResultResource::collection(collect($results)), 'Booking results uploaded');
     }
 
-    private function requireActor(Request $request, array $allowedClasses): User|Partner|Owner
+    private function requireActor(Request $request, array $allowedClasses): User|Partner|Owner|Admin
     {
         $actor = $request->user('sanctum');
 
@@ -144,9 +170,9 @@ class BookingController extends Controller
         abort(403, 'You are not authorized to perform this action.');
     }
 
-    private function authorizeBookingAccess(Booking $booking, User|Partner|Owner $actor): void
+    private function authorizeBookingAccess(Booking $booking, User|Partner|Owner|Admin $actor): void
     {
-        if ($actor instanceof Owner) {
+        if ($actor instanceof Owner || $actor instanceof Admin) {
             return;
         }
 

@@ -5,6 +5,7 @@ namespace App\Http\Controllers\API\V1;
 use App\Http\Controllers\API\V1\Concerns\ApiResponse;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\API\V1\NotificationResource;
+use App\Models\Admin;
 use App\Models\AppNotification;
 use App\Models\DeviceToken;
 use App\Models\Owner;
@@ -100,6 +101,10 @@ class NotificationController extends Controller
             ],
             $actor instanceof Owner => [
                 'user_type' => 'owner',
+                'user_id' => $actor->id,
+            ],
+            $actor instanceof Admin => [
+                'user_type' => 'admin',
                 'user_id' => $actor->id,
             ],
             default => abort(403, 'You are not authorized to access notifications.'),
