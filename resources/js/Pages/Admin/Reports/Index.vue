@@ -48,9 +48,11 @@ function headline(value) {
             </form>
         </div>
         <div class="row g-4 mb-4">
-            <div class="col-md-4"><StatCard label="Bookings in Range" :value="totals.bookings" icon="bi-calendar-range" /></div>
-            <div class="col-md-4"><StatCard label="Revenue in Range" :value="`₹${totals.revenue}`" icon="bi-graph-up-arrow" /></div>
-            <div class="col-md-4"><StatCard label="Payments in Range" :value="totals.payments" icon="bi-cash-stack" /></div>
+            <div class="col-md-6 col-xl-3"><StatCard label="Bookings in Range" :value="totals.bookings" icon="bi-calendar-range" /></div>
+            <div class="col-md-6 col-xl-3"><StatCard label="Platform (advance) in Range" :value="`₹${totals.platform_revenue}`" icon="bi-bank" hint="Fixed % — main admin share" /></div>
+            <div class="col-md-6 col-xl-3"><StatCard label="Partner earnings (final) in Range" :value="`₹${totals.partner_earnings}`" icon="bi-camera-reels" /></div>
+            <div class="col-md-6 col-xl-3"><StatCard label="Total collected" :value="`₹${totals.revenue}`" icon="bi-graph-up-arrow" hint="Advance + final" /></div>
+            <div class="col-md-6 col-xl-3"><StatCard label="Payment rows in Range" :value="totals.payments" icon="bi-cash-stack" /></div>
         </div>
         <div class="row g-4">
             <div class="col-lg-6">
@@ -66,10 +68,10 @@ function headline(value) {
             </div>
             <div class="col-lg-6">
                 <div class="table-card h-100">
-                    <div class="p-4 border-bottom"><h2 class="h5 mb-0">Revenue by Payment Type</h2></div>
+                    <div class="p-4 border-bottom"><h2 class="h5 mb-0">Revenue by payment type</h2></div>
                     <div class="p-4">
                         <div v-for="item in paymentTypeTotals" :key="item.type" class="d-flex justify-content-between align-items-center border rounded-4 p-3 mb-3">
-                            <div>{{ headline(item.type) }}</div>
+                            <div>{{ item.type === 'advance' ? 'Advance (platform)' : item.type === 'final' ? 'Final (partner earnings)' : headline(item.type) }}</div>
                             <strong>₹{{ item.total }}</strong>
                         </div>
                     </div>

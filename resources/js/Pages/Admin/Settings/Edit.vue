@@ -173,6 +173,7 @@ const activeTabLabel = computed(() => tabs.find((tab) => tab.key === activeTab.v
                     <div class="col-md-4">
                         <label class="form-label">Advance Payment Percentage</label>
                         <input v-model="form.booking_advance_percentage" class="form-control" type="number" min="1" max="100">
+                        <div class="form-text">Share of the plan price collected as advance (platform). The remainder is the partner’s final payment.</div>
                     </div>
                     <div class="col-md-8">
                         <label class="form-label">Maintenance Message</label>

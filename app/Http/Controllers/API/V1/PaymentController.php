@@ -11,6 +11,7 @@ use App\Models\Owner;
 use App\Models\Partner;
 use App\Models\User;
 use App\Services\PaymentService;
+use App\Support\AdminCityScope;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -18,9 +19,7 @@ class PaymentController extends Controller
 {
     use ApiResponse;
 
-    public function __construct(private readonly PaymentService $paymentService)
-    {
-    }
+    public function __construct(private readonly PaymentService $paymentService) {}
 
     public function advanceIntent(Request $request): JsonResponse
     {
@@ -153,7 +152,7 @@ class PaymentController extends Controller
         $allowed = ($actor instanceof User && (int) $booking->user_id === (int) $actor->id)
             || ($actor instanceof Partner && (int) $booking->assigned_partner_id === (int) $actor->id)
             || $actor instanceof Owner
-            || $actor instanceof Admin;
+            || ($actor instanceof Admin && AdminCityScope::adminCanAccessBooking($actor, $booking));
 
         abort_unless($allowed, 403, 'You are not allowed to view payments for this booking.');
 

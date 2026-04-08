@@ -2,19 +2,29 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Http\Controllers\Admin\Concerns\AuthorizesAdminCity;
 use App\Models\Payment;
+use App\Support\AdminCityScope;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
 use Inertia\Response;
 
 class PaymentController
 {
+    use AuthorizesAdminCity;
+
     public function index(Request $request): Response
     {
+        $admin = Auth::guard('admin')->user();
         $filters = $request->only(['booking_id', 'user', 'payment_type', 'payment_status', 'date']);
 
+        $base = AdminCityScope::payments(Payment::query(), $admin);
+
+        $summaryBase = clone $base;
+
         return Inertia::render('Admin/Payments/Index', [
-            'payments' => Payment::with(['booking.user', 'booking.plan'])
+            'payments' => $base->with(['booking.user', 'booking.plan'])
                 ->filter($filters)
                 ->latest()
                 ->paginate(20)
@@ -22,15 +32,17 @@ class PaymentController
                 ->through(fn (Payment $payment) => $this->transformPayment($payment)),
             'filters' => $filters,
             'summary' => [
-                'advance_paid' => (string) Payment::where('payment_type', 'advance')->where('payment_status', 'paid')->sum('amount'),
-                'final_paid' => (string) Payment::where('payment_type', 'final')->where('payment_status', 'paid')->sum('amount'),
-                'pending' => Payment::where('payment_status', 'pending')->count(),
+                'advance_paid' => (string) (clone $summaryBase)->where('payment_type', 'advance')->where('payment_status', 'paid')->sum('amount'),
+                'final_paid' => (string) (clone $summaryBase)->where('payment_type', 'final')->where('payment_status', 'paid')->sum('amount'),
+                'pending' => (clone $summaryBase)->where('payment_status', 'pending')->count(),
             ],
         ]);
     }
 
     public function show(Payment $payment): Response
     {
+        $this->abortUnlessPaymentInScope($payment);
+
         $payment->load(['booking.user', 'booking.plan', 'booking.assignedPartner']);
 
         return Inertia::render('Admin/Payments/Show', [

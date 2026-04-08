@@ -3,9 +3,11 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Enums\PartnerKycStatus;
+use App\Http\Controllers\Admin\Concerns\AuthorizesAdminCity;
 use App\Http\Requests\Admin\PartnerRequest;
 use App\Models\City;
 use App\Models\Partner;
+use App\Support\AdminCityScope;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -16,14 +18,19 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class PartnerController
 {
+    use AuthorizesAdminCity;
+
     /**
      * Partners with KYC status pending (awaiting admin review).
      */
     public function pendingKyc(Request $request): Response
     {
+        $admin = Auth::guard('admin')->user();
         $filters = $request->only(['search']);
 
-        $query = Partner::query()
+        $query = Partner::query();
+        AdminCityScope::partners($query, $admin);
+        $query
             ->join('partner_kyc', 'partners.id', '=', 'partner_kyc.partner_id')
             ->where('partner_kyc.status', PartnerKycStatus::Pending->value)
             ->select('partners.*')
@@ -54,10 +61,17 @@ class PartnerController
 
     public function index(Request $request): Response
     {
+        $admin = Auth::guard('admin')->user();
         $filters = $request->only(['search', 'status', 'city_id', 'kyc_status']);
+        if ($admin->city_id) {
+            $filters['city_id'] = (string) $admin->city_id;
+        }
+
+        $partnerQuery = Partner::query();
+        AdminCityScope::partners($partnerQuery, $admin);
 
         return Inertia::render('Admin/Partners/Index', [
-            'partners' => Partner::query()
+            'partners' => $partnerQuery
                 ->with(['managedCity', 'serviceCities', 'kyc'])
                 ->withAvg('ratings', 'rating')
                 ->withCount(['assignedBookings', 'ratings'])
@@ -73,9 +87,12 @@ class PartnerController
 
     public function create(): Response
     {
+        $admin = Auth::guard('admin')->user();
+
         return Inertia::render('Admin/Partners/Form', [
             'partner' => null,
             'cities' => $this->cityOptions(),
+            'city_admin_locked' => $admin && $admin->city_id,
             'submitUrl' => route('admin.partners.store'),
             'method' => 'post',
         ]);
@@ -95,6 +112,8 @@ class PartnerController
 
     public function show(Partner $partner): Response
     {
+        $this->abortUnlessPartnerInScope($partner);
+
         $partner->load(['managedCity', 'serviceCities', 'assignedBookings.user', 'assignedBookings.plan', 'bookingResults', 'kyc.reviewedByAdmin']);
         $partner->load(['ratings' => fn ($q) => $q->with(['booking.plan', 'user'])->latest()->limit(50)]);
         $partner->loadAvg('ratings', 'rating');
@@ -107,9 +126,14 @@ class PartnerController
 
     public function edit(Partner $partner): Response
     {
+        $this->abortUnlessPartnerInScope($partner);
+
+        $admin = Auth::guard('admin')->user();
+
         return Inertia::render('Admin/Partners/Form', [
             'partner' => $this->transformPartner($partner->load(['managedCity', 'serviceCities'])->loadCount('assignedBookings'), true),
             'cities' => $this->cityOptions(),
+            'city_admin_locked' => $admin && $admin->city_id,
             'submitUrl' => route('admin.partners.update', $partner),
             'method' => 'put',
         ]);
@@ -117,6 +141,8 @@ class PartnerController
 
     public function update(PartnerRequest $request, Partner $partner): RedirectResponse
     {
+        $this->abortUnlessPartnerInScope($partner);
+
         $data = $request->validated();
         $serviceCityIds = $data['service_city_ids'] ?? [];
         unset($data['service_city_ids']);
@@ -129,6 +155,8 @@ class PartnerController
 
     public function updateStatus(Request $request, Partner $partner): RedirectResponse
     {
+        $this->abortUnlessPartnerInScope($partner);
+
         $data = $request->validate([
             'status' => ['required', 'in:active,inactive'],
         ]);
@@ -142,6 +170,8 @@ class PartnerController
 
     public function destroy(Partner $partner): RedirectResponse
     {
+        $this->abortUnlessPartnerInScope($partner);
+
         $partner->serviceCities()->detach();
         $partner->delete();
 
@@ -150,6 +180,8 @@ class PartnerController
 
     public function verifyKyc(Partner $partner): RedirectResponse
     {
+        $this->abortUnlessPartnerInScope($partner);
+
         $partner->load('kyc');
 
         if (! $partner->kyc || $partner->kyc->status !== PartnerKycStatus::Pending) {
@@ -168,6 +200,8 @@ class PartnerController
 
     public function rejectKyc(Request $request, Partner $partner): RedirectResponse
     {
+        $this->abortUnlessPartnerInScope($partner);
+
         $data = $request->validate([
             'rejection_reason' => ['required', 'string', 'max:2000'],
         ]);
@@ -190,6 +224,8 @@ class PartnerController
 
     public function kycFile(Partner $partner, string $field): StreamedResponse
     {
+        $this->abortUnlessPartnerInScope($partner);
+
         $allowed = ['aadhar_front', 'aadhar_back', 'pan_image', 'selfie'];
         abort_unless(in_array($field, $allowed, true), 404);
 
@@ -295,6 +331,17 @@ class PartnerController
 
     private function cityOptions(): array
     {
+        $admin = Auth::guard('admin')->user();
+
+        if ($admin && $admin->city_id) {
+            $city = City::query()
+                ->where('id', $admin->city_id)
+                ->where('status', 'active')
+                ->first(['id', 'name']);
+
+            return $city ? [['id' => $city->id, 'name' => $city->name]] : [];
+        }
+
         return City::query()
             ->where('status', 'active')
             ->orderBy('sort_order')

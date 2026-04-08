@@ -160,9 +160,11 @@ class AuthController extends Controller
             ], 'Owner logged in');
         }
 
-        $admin = Admin::where('email', $data['email'])->first();
+        $admin = Admin::query()->where('email', $data['email'])->first();
 
         if ($admin && Hash::check($data['password'], $admin->password)) {
+            $admin->load('city');
+
             return $this->success([
                 'token' => $admin->createToken('admin-app')->plainTextToken,
                 'owner' => new ProfileResource($admin),
@@ -214,6 +216,10 @@ class AuthController extends Controller
         $actor = $request->user('sanctum');
 
         abort_unless($actor instanceof Owner || $actor instanceof Admin, 403, 'Only admins can access this profile.');
+
+        if ($actor instanceof Admin) {
+            $actor->loadMissing('city');
+        }
 
         return $this->success(new ProfileResource($actor), 'Owner profile');
     }
@@ -356,7 +362,12 @@ class AuthController extends Controller
 
         $actor->update($data);
 
-        return $this->success(new ProfileResource($actor->fresh()), 'Owner profile updated');
+        $fresh = $actor->fresh();
+        if ($fresh instanceof Admin) {
+            $fresh->load('city');
+        }
+
+        return $this->success(new ProfileResource($fresh), 'Owner profile updated');
     }
 
     public function updateOwnerPassword(Request $request): JsonResponse

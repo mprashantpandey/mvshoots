@@ -2,6 +2,8 @@
 
 namespace App\Http\Resources\API\V1;
 
+use App\Models\Admin;
+use App\Models\Owner;
 use App\Models\Partner;
 use App\Models\User;
 use Illuminate\Http\Request;
@@ -41,6 +43,10 @@ class ProfileResource extends JsonResource
             ];
         }
 
+        if ($this->resource instanceof Owner) {
+            $base['actor_type'] = 'owner';
+        }
+
         if ($this->resource instanceof Partner) {
             $partner = $this->resource;
             $base['account'] = [
@@ -52,6 +58,16 @@ class ProfileResource extends JsonResource
                 ? round((float) $partner->ratings_avg_rating, 2)
                 : null;
             $base['ratings_count'] = (int) ($partner->ratings_count ?? 0);
+        }
+
+        if ($this->resource instanceof Admin) {
+            $admin = $this->resource;
+            $admin->loadMissing('city');
+            $base['actor_type'] = 'admin';
+            $base['city'] = $admin->city?->name;
+            $base['is_main'] = $admin->isMainAdmin();
+            $base['is_super_admin'] = $admin->isSuperAdmin();
+            $base['admin_city_name'] = $admin->city?->name;
         }
 
         return $base;

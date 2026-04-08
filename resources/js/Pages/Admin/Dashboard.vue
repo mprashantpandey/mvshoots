@@ -1,5 +1,5 @@
 <script setup>
-import { onBeforeUnmount, onMounted, ref } from 'vue';
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
 import { Link } from '@inertiajs/vue3';
 import { Chart } from 'chart.js/auto';
 import AdminLayout from '../../Layouts/AdminLayout.vue';
@@ -7,13 +7,16 @@ import StatCard from '../../Components/Admin/StatCard.vue';
 import StatusBadge from '../../Components/Admin/StatusBadge.vue';
 
 const props = defineProps({
+    is_super_admin: { type: Boolean, default: true },
+    admin_city_name: { type: String, default: null },
     totalUsers: Number,
     totalPartners: Number,
     totalBookings: Number,
     totalCategories: Number,
     totalPlans: Number,
     totalReels: Number,
-    totalRevenue: Number,
+    platformRevenue: Number,
+    partnerEarnings: Number,
     pendingBookings: Number,
     completedBookings: Number,
     pendingPayments: Number,
@@ -23,6 +26,12 @@ const props = defineProps({
     bookingChart: Array,
     revenueChart: Array,
 });
+
+const dashboardSubtitle = computed(() =>
+    props.admin_city_name
+        ? `Bookings, partners, and payments in ${props.admin_city_name}`
+        : 'Customer journey & business health at a glance',
+);
 
 const bookingsCanvas = ref(null);
 const revenueCanvas = ref(null);
@@ -51,21 +60,34 @@ onMounted(() => {
         },
     });
 
+    const revPoints = props.revenueChart?.length ? props.revenueChart : [{ date: '—', platform: 0, partner: 0 }];
     revenueChartInstance = new Chart(revenueCanvas.value, {
         type: 'bar',
         data: {
-            labels: props.revenueChart.map((item) => item.date),
-            datasets: [{
-                label: 'Revenue',
-                data: props.revenueChart.map((item) => item.total),
-                backgroundColor: '#10b981',
-                borderRadius: 10,
-            }],
+            labels: revPoints.map((item) => item.date),
+            datasets: [
+                {
+                    label: 'Platform (advance fee)',
+                    data: revPoints.map((item) => item.platform ?? 0),
+                    backgroundColor: '#2563eb',
+                    borderRadius: 10,
+                },
+                {
+                    label: 'Partner earnings (final)',
+                    data: revPoints.map((item) => item.partner ?? 0),
+                    backgroundColor: '#10b981',
+                    borderRadius: 10,
+                },
+            ],
         },
         options: {
             responsive: true,
             plugins: {
-                legend: { display: false },
+                legend: { display: true },
+            },
+            scales: {
+                x: { stacked: true },
+                y: { stacked: true },
             },
         },
     });
@@ -78,15 +100,18 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-    <AdminLayout title="Dashboard" subtitle="Customer journey &amp; business health at a glance">
+    <AdminLayout title="Dashboard" :subtitle="dashboardSubtitle">
         <div class="row g-4 mb-4">
             <div class="col-6 col-xl-3"><StatCard label="Customers (users)" :value="props.totalUsers" icon="bi-people" /></div>
             <div class="col-6 col-xl-3"><StatCard label="Total Partners" :value="props.totalPartners" icon="bi-camera-reels" /></div>
             <div class="col-6 col-xl-3"><StatCard label="Total Bookings" :value="props.totalBookings" icon="bi-calendar2-check" /></div>
-            <div class="col-6 col-xl-3"><StatCard label="Revenue" :value="`₹${Number(props.totalRevenue ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`" icon="bi-cash-stack" /></div>
-            <div class="col-6 col-xl-3"><StatCard label="Categories" :value="props.totalCategories" icon="bi-collection" /></div>
-            <div class="col-6 col-xl-3"><StatCard label="Plans" :value="props.totalPlans" icon="bi-card-checklist" /></div>
-            <div class="col-6 col-xl-3"><StatCard label="Reels" :value="props.totalReels" icon="bi-play-btn" /></div>
+            <div class="col-6 col-xl-3"><StatCard label="Platform (advance)" :value="`₹${Number(props.platformRevenue ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`" icon="bi-bank" hint="Fixed % collected as advance" /></div>
+            <div class="col-6 col-xl-3"><StatCard label="Partner earnings (final)" :value="`₹${Number(props.partnerEarnings ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`" icon="bi-camera-reels" hint="Balance paid to partners" /></div>
+            <template v-if="props.is_super_admin">
+                <div class="col-6 col-xl-3"><StatCard label="Categories" :value="props.totalCategories ?? 0" icon="bi-collection" /></div>
+                <div class="col-6 col-xl-3"><StatCard label="Plans" :value="props.totalPlans ?? 0" icon="bi-card-checklist" /></div>
+                <div class="col-6 col-xl-3"><StatCard label="Reels" :value="props.totalReels ?? 0" icon="bi-play-btn" /></div>
+            </template>
             <div class="col-6 col-xl-3"><StatCard label="Pending Payments" :value="props.pendingPayments" icon="bi-hourglass-split" /></div>
         </div>
 
@@ -107,8 +132,8 @@ onBeforeUnmount(() => {
                 <div class="glass-card p-4 h-100">
                     <div class="d-flex justify-content-between align-items-center mb-4">
                         <div>
-                            <h2 class="h5 mb-1">Revenue Trend</h2>
-                            <p class="text-secondary mb-0">Paid payments in the latest 7 days</p>
+                            <h2 class="h5 mb-1">Payments trend</h2>
+                            <p class="text-secondary mb-0">Advance (platform) vs final (partner) — recent days with activity</p>
                         </div>
                         <StatusBadge value="paid" />
                     </div>

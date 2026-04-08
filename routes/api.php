@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\API\V1\AdminStaffController;
 use App\Http\Controllers\API\V1\AppConfigController;
 use App\Http\Controllers\API\V1\AuthController;
 use App\Http\Controllers\API\V1\BookingController;
@@ -9,6 +10,7 @@ use App\Http\Controllers\API\V1\CityController;
 use App\Http\Controllers\API\V1\NotificationController;
 use App\Http\Controllers\API\V1\OwnerDashboardController;
 use App\Http\Controllers\API\V1\PartnerController;
+use App\Http\Controllers\API\V1\PartnerDashboardController;
 use App\Http\Controllers\API\V1\PartnerKycController;
 use App\Http\Controllers\API\V1\PartnerRatingController;
 use App\Http\Controllers\API\V1\PaymentController;
@@ -38,11 +40,20 @@ Route::prefix('v1')->group(function (): void {
             Route::post('/partner/kyc', [PartnerKycController::class, 'store']);
             Route::get('/partner/kyc/files/{field}', [PartnerKycController::class, 'file'])->where('field', '[a-z_]+');
             Route::get('/partner/ratings', [PartnerRatingController::class, 'index']);
+            Route::get('/partner/dashboard', [PartnerDashboardController::class, 'show']);
             Route::post('/owner/logout', [AuthController::class, 'ownerLogout']);
             Route::get('/owner/me', [AuthController::class, 'ownerProfile']);
             Route::put('/owner/profile', [AuthController::class, 'updateOwnerProfile']);
             Route::put('/owner/password', [AuthController::class, 'updateOwnerPassword']);
             Route::delete('/owner/account', [AuthController::class, 'deleteOwnerAccount']);
+
+            Route::middleware('main_admin')->group(function (): void {
+                Route::get('/owner/staff', [AdminStaffController::class, 'index']);
+                Route::get('/owner/staff/cities', [AdminStaffController::class, 'cityOptions']);
+                Route::post('/owner/staff', [AdminStaffController::class, 'store']);
+                Route::put('/owner/staff/{admin}', [AdminStaffController::class, 'update']);
+                Route::delete('/owner/staff/{admin}', [AdminStaffController::class, 'destroy']);
+            });
         });
     });
 

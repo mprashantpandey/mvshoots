@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Admin;
 
+use App\Models\Admin;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -20,6 +21,19 @@ class PartnerRequest extends FormRequest
 
         if ($this->input('service_city_ids') === null) {
             $this->merge(['service_city_ids' => []]);
+        }
+
+        $user = $this->user();
+        if ($user instanceof Admin && $user->city_id) {
+            $svc = array_map('intval', (array) $this->input('service_city_ids', []));
+            $cid = (int) $user->city_id;
+            if (! in_array($cid, $svc, true)) {
+                $svc[] = $cid;
+            }
+            $this->merge([
+                'city_id' => $cid,
+                'service_city_ids' => array_values(array_unique($svc)),
+            ]);
         }
     }
 

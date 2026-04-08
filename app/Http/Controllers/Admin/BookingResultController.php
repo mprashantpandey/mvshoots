@@ -2,18 +2,25 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Http\Controllers\Admin\Concerns\AuthorizesAdminCity;
 use App\Models\Booking;
+use App\Support\AdminCityScope;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
 use Inertia\Response;
 
 class BookingResultController
 {
+    use AuthorizesAdminCity;
+
     public function index(Request $request): Response
     {
+        $admin = Auth::guard('admin')->user();
         $filters = $request->only(['status', 'search']);
 
-        $bookings = Booking::with(['user', 'assignedPartner', 'results'])
+        $bookings = AdminCityScope::bookings(Booking::query(), $admin)
+            ->with(['user', 'assignedPartner', 'results'])
             ->when($request->string('search')->value(), function ($query, $search): void {
                 $query->where(function ($nested) use ($search): void {
                     $nested->where('id', $search)
@@ -42,6 +49,8 @@ class BookingResultController
 
     public function show(Booking $booking): Response
     {
+        $this->abortUnlessBookingInScope($booking);
+
         $booking->load(['user', 'assignedPartner', 'results.partner']);
 
         return Inertia::render('Admin/BookingResults/Show', [

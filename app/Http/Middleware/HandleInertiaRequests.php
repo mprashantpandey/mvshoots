@@ -24,10 +24,14 @@ class HandleInertiaRequests extends Middleware
                 ? Setting::value('app_name', 'VM Shoot')
                 : 'VM Shoot',
             'auth' => [
-                'admin' => $request->user('admin')
+                'admin' => ($admin = $request->user('admin'))
                     ? [
-                        'name' => $request->user('admin')->name,
-                        'email' => $request->user('admin')->email,
+                        'name' => $admin->name,
+                        'email' => $admin->email,
+                        'is_super_admin' => $admin->isSuperAdmin(),
+                        'is_main' => $admin->isMainAdmin(),
+                        'city_id' => $admin->city_id,
+                        'city_name' => $admin->loadMissing('city')->city?->name,
                     ]
                     : null,
             ],

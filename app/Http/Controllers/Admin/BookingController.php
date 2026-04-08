@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Enums\BookingStatus;
+use App\Http\Controllers\Admin\Concerns\AuthorizesAdminCity;
 use App\Http\Requests\Admin\BookingAssignPartnerRequest;
 use App\Http\Requests\Admin\BookingStatusRequest;
 use App\Models\Booking;
@@ -11,6 +12,7 @@ use App\Models\Partner;
 use App\Models\Plan;
 use App\Services\BookingService;
 use App\Services\PartnerAssignmentService;
+use App\Support\AdminCityScope;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -19,10 +21,13 @@ use Inertia\Response;
 
 class BookingController
 {
+    use AuthorizesAdminCity;
+
     public function __construct(private readonly PartnerAssignmentService $partnerAssignmentService) {}
 
     public function index(Request $request): Response
     {
+        $admin = Auth::guard('admin')->user();
         $filters = $request->only([
             'booking_id',
             'user',
@@ -34,14 +39,17 @@ class BookingController
             'status',
         ]);
 
+        $bookingsQuery = AdminCityScope::bookings(Booking::query(), $admin)
+            ->with(['user', 'plan', 'assignedPartner', 'category', 'payments'])
+            ->filter($filters)
+            ->latest();
+
         return Inertia::render('Admin/Bookings/Index', [
-            'bookings' => Booking::with(['user', 'plan', 'assignedPartner', 'category', 'payments'])
-                ->filter($filters)
-                ->latest()
+            'bookings' => $bookingsQuery
                 ->paginate(15)
                 ->withQueryString()
                 ->through(fn (Booking $booking) => $this->transformBooking($booking)),
-            'partners' => Partner::query()
+            'partners' => AdminCityScope::partners(Partner::query(), $admin)
                 ->orderBy('name')
                 ->get(['id', 'name'])
                 ->map(fn (Partner $partner) => ['id' => $partner->id, 'name' => $partner->name]),
@@ -58,6 +66,8 @@ class BookingController
 
     public function show(Booking $booking): Response
     {
+        $this->abortUnlessBookingInScope($booking);
+
         $booking->load(['user', 'category', 'plan', 'assignedPartner', 'payments', 'results.partner', 'statusLogs', 'partnerRating.user']);
 
         return Inertia::render('Admin/Bookings/Show', [
@@ -75,6 +85,8 @@ class BookingController
 
     public function assignPartner(BookingAssignPartnerRequest $request, Booking $booking): RedirectResponse
     {
+        $this->abortUnlessBookingInScope($booking);
+
         $data = $request->validated();
 
         $this->partnerAssignmentService->assign($booking, $data['partner_id'], Auth::guard('admin')->user(), $data['remarks'] ?? null);
@@ -84,6 +96,8 @@ class BookingController
 
     public function updateStatus(BookingStatusRequest $request, Booking $booking, BookingService $bookingService): RedirectResponse
     {
+        $this->abortUnlessBookingInScope($booking);
+
         $data = $request->validated();
 
         $bookingService->updateStatus($booking, $data['status'], Auth::guard('admin')->user(), $data['remarks'] ?? null);

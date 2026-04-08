@@ -15,6 +15,8 @@ class AdminSeeder extends Seeder
             [
                 'name' => 'Platform Admin',
                 'password' => Hash::make('password'),
+                'city_id' => null,
+                'is_main' => true,
             ]
         );
     }

@@ -2,26 +2,31 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Enums\PaymentStatus;
+use App\Enums\PaymentType;
 use App\Models\Booking;
 use App\Models\Partner;
 use App\Models\Payment;
+use App\Support\AdminCityScope;
 use Illuminate\Http\Request;
-use Symfony\Component\HttpFoundation\StreamedResponse;
+use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
 use Inertia\Response;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class ReportController
 {
     public function __invoke(Request $request): Response|StreamedResponse
     {
+        $admin = Auth::guard('admin')->user();
         $from = $request->date('from');
         $to = $request->date('to');
 
-        $bookings = Booking::query()
+        $bookings = AdminCityScope::bookings(Booking::query(), $admin)
             ->when($from, fn ($query) => $query->whereDate('booking_date', '>=', $from))
             ->when($to, fn ($query) => $query->whereDate('booking_date', '<=', $to));
 
-        $payments = Payment::query()
+        $payments = AdminCityScope::payments(Payment::query(), $admin)
             ->when($from, fn ($query) => $query->whereDate('created_at', '>=', $from))
             ->when($to, fn ($query) => $query->whereDate('created_at', '<=', $to));
 
@@ -36,8 +41,17 @@ class ReportController
             }, 'booking-report.csv');
         }
 
-        $partnerPerformance = Partner::withCount('assignedBookings')
-            ->withCount(['assignedBookings as completed_bookings_count' => fn ($query) => $query->where('status', 'completed')])
+        $partnerPerformance = AdminCityScope::partners(Partner::query(), $admin)
+            ->withCount([
+                'assignedBookings as assigned_bookings_count' => fn ($query) => $admin->city_id
+                    ? $query->where('city_id', $admin->city_id)
+                    : $query,
+            ])
+            ->withCount([
+                'assignedBookings as completed_bookings_count' => fn ($query) => $query
+                    ->where('status', 'completed')
+                    ->when($admin->city_id, fn ($q) => $q->where('city_id', $admin->city_id)),
+            ])
             ->orderByDesc('assigned_bookings_count')
             ->take(10)
             ->get();
@@ -64,7 +78,15 @@ class ReportController
                 ->values(),
             'totals' => [
                 'bookings' => (clone $bookings)->count(),
-                'revenue' => (string) (clone $payments)->where('payment_status', 'paid')->sum('amount'),
+                'platform_revenue' => (string) (clone $payments)
+                    ->where('payment_status', PaymentStatus::Paid->value)
+                    ->where('payment_type', PaymentType::Advance->value)
+                    ->sum('amount'),
+                'partner_earnings' => (string) (clone $payments)
+                    ->where('payment_status', PaymentStatus::Paid->value)
+                    ->where('payment_type', PaymentType::Final->value)
+                    ->sum('amount'),
+                'revenue' => (string) (clone $payments)->where('payment_status', PaymentStatus::Paid->value)->sum('amount'),
                 'payments' => (clone $payments)->count(),
             ],
             'partnerPerformance' => $partnerPerformance->map(fn ($partner) => [

@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Admin\AdminStaffController;
 use App\Http\Controllers\Admin\AuthController;
 use App\Http\Controllers\Admin\BookingController;
 use App\Http\Controllers\Admin\BookingResultController;
@@ -42,21 +43,23 @@ Route::prefix('admin')->name('admin.')->middleware('auth:admin')->group(function
     Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
     Route::get('/dashboard', DashboardController::class)->name('dashboard');
 
-    Route::resource('cities', CityController::class);
-    Route::resource('categories', CategoryController::class);
-    Route::resource('plans', PlanController::class);
-    Route::resource('reels', ReelController::class);
-    Route::resource('sliders', SliderController::class)->except(['show']);
+    Route::middleware('main_admin')->group(function (): void {
+        Route::get('/staff', [AdminStaffController::class, 'index'])->name('staff.index');
+        Route::get('/staff/create', [AdminStaffController::class, 'create'])->name('staff.create');
+        Route::post('/staff', [AdminStaffController::class, 'store'])->name('staff.store');
+        Route::get('/staff/{admin}/edit', [AdminStaffController::class, 'edit'])->name('staff.edit');
+        Route::put('/staff/{admin}', [AdminStaffController::class, 'update'])->name('staff.update');
+        Route::delete('/staff/{admin}', [AdminStaffController::class, 'destroy'])->name('staff.destroy');
+    });
+
     Route::get('/partners/kyc/pending', [PartnerController::class, 'pendingKyc'])->name('partners.kyc.pending');
     Route::resource('partners', PartnerController::class);
-    Route::resource('owners', OwnerController::class);
     Route::post('/partners/{partner}/status', [PartnerController::class, 'updateStatus'])->name('partners.update-status');
     Route::post('/partners/{partner}/kyc/verify', [PartnerController::class, 'verifyKyc'])->name('partners.kyc.verify');
     Route::post('/partners/{partner}/kyc/reject', [PartnerController::class, 'rejectKyc'])->name('partners.kyc.reject');
     Route::get('/partners/{partner}/kyc/files/{field}', [PartnerController::class, 'kycFile'])
         ->name('partners.kyc.file')
         ->where('field', 'aadhar_front|aadhar_back|pan_image|selfie');
-    Route::post('/owners/{owner}/status', [OwnerController::class, 'updateStatus'])->name('owners.update-status');
 
     Route::get('/bookings', [BookingController::class, 'index'])->name('bookings.index');
     Route::get('/bookings/{booking}', [BookingController::class, 'show'])->name('bookings.show');
@@ -70,10 +73,21 @@ Route::prefix('admin')->name('admin.')->middleware('auth:admin')->group(function
     Route::post('/users/{user}/status', [UserController::class, 'updateStatus'])->name('users.update-status');
     Route::get('/payments', [PaymentController::class, 'index'])->name('payments.index');
     Route::get('/payments/{payment}', [PaymentController::class, 'show'])->name('payments.show');
-    Route::get('/notifications', [NotificationController::class, 'index'])->name('notifications.index');
-    Route::post('/notifications', [NotificationController::class, 'store'])->name('notifications.store');
-    Route::post('/notifications/{notification}/read-state', [NotificationController::class, 'updateReadState'])->name('notifications.update-read-state');
     Route::get('/reports', ReportController::class)->name('reports.index');
-    Route::get('/settings', [SettingController::class, 'edit'])->name('settings.edit');
-    Route::put('/settings', [SettingController::class, 'update'])->name('settings.update');
+
+    Route::middleware('super_admin')->group(function (): void {
+        Route::resource('cities', CityController::class);
+        Route::resource('categories', CategoryController::class);
+        Route::resource('plans', PlanController::class);
+        Route::resource('reels', ReelController::class);
+        Route::resource('sliders', SliderController::class)->except(['show']);
+        Route::resource('owners', OwnerController::class);
+        Route::post('/owners/{owner}/status', [OwnerController::class, 'updateStatus'])->name('owners.update-status');
+
+        Route::get('/notifications', [NotificationController::class, 'index'])->name('notifications.index');
+        Route::post('/notifications', [NotificationController::class, 'store'])->name('notifications.store');
+        Route::post('/notifications/{notification}/read-state', [NotificationController::class, 'updateReadState'])->name('notifications.update-read-state');
+        Route::get('/settings', [SettingController::class, 'edit'])->name('settings.edit');
+        Route::put('/settings', [SettingController::class, 'update'])->name('settings.update');
+    });
 });

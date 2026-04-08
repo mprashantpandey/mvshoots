@@ -2,21 +2,34 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Http\Controllers\Admin\Concerns\AuthorizesAdminCity;
 use App\Models\User;
+use App\Support\AdminCityScope;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
 use Inertia\Response;
 
 class UserController
 {
+    use AuthorizesAdminCity;
+
     public function index(Request $request): Response
     {
+        $admin = Auth::guard('admin')->user();
         $filters = $request->only(['search', 'status']);
 
+        $userQuery = AdminCityScope::users(User::query(), $admin);
+
+        if ($admin->city_id) {
+            $userQuery->withCount(['bookings' => fn ($q) => $q->where('city_id', $admin->city_id)]);
+        } else {
+            $userQuery->withCount('bookings');
+        }
+
         return Inertia::render('Admin/Users/Index', [
-            'users' => User::query()
-                ->withCount('bookings')
+            'users' => $userQuery
                 ->filter($filters)
                 ->latest()
                 ->paginate(20)
@@ -28,11 +41,17 @@ class UserController
 
     public function show(User $user): Response
     {
+        $this->abortUnlessUserInScope($user);
+
+        $admin = Auth::guard('admin')->user();
+        $bookingsQuery = $user->bookings()->with(['plan', 'category', 'assignedPartner'])->latest();
+        if ($admin->city_id) {
+            $bookingsQuery->where('city_id', $admin->city_id);
+        }
+
         return Inertia::render('Admin/Users/Show', [
-            'user' => $this->transformUser($user->loadCount('bookings'), true),
-            'bookings' => $user->bookings()
-                ->with(['plan', 'category', 'assignedPartner'])
-                ->latest()
+            'user' => $this->transformUser($user->loadCount(['bookings' => fn ($q) => $admin->city_id ? $q->where('city_id', $admin->city_id) : $q]), true),
+            'bookings' => $bookingsQuery
                 ->paginate(10)
                 ->through(fn ($booking) => [
                     'id' => $booking->id,
@@ -48,6 +67,8 @@ class UserController
 
     public function updateStatus(Request $request, User $user): RedirectResponse
     {
+        $this->abortUnlessUserInScope($user);
+
         $data = $request->validate([
             'status' => ['required', 'in:active,inactive'],
         ]);

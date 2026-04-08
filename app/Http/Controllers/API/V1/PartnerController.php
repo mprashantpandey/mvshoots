@@ -8,6 +8,7 @@ use App\Http\Resources\API\V1\ProfileResource;
 use App\Models\Admin;
 use App\Models\Owner;
 use App\Models\Partner;
+use App\Support\AdminCityScope;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -26,6 +27,7 @@ class PartnerController extends Controller
             ->with(['managedCity', 'serviceCities', 'kyc'])
             ->withAvg('ratings', 'rating')
             ->withCount('ratings')
+            ->when($actor instanceof Admin, fn ($q) => AdminCityScope::partners($q, $actor))
             ->filter([
                 'search' => $request->filled('search') ? $request->string('search')->toString() : null,
                 'status' => $request->filled('status') ? $request->string('status')->toString() : null,

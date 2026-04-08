@@ -14,7 +14,7 @@ function submit() {
 </script>
 
 <template>
-    <AuthLayout title="Admin Login" subtitle="Email and password access for the operations dashboard.">
+    <AuthLayout title="Admin Login" subtitle="Sign in as the main administrator or a city administrator — same page, scope depends on your account.">
         <form @submit.prevent="submit">
             <div class="mb-3">
                 <label class="form-label">Email</label>

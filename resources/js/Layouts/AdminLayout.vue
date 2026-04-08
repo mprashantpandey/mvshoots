@@ -20,24 +20,39 @@ const appName = computed(() => page.props.appName ?? 'VM Shoot');
 const admin = computed(() => page.props.auth?.admin);
 const currentUrl = computed(() => page.url);
 
-const links = [
-    { href: '/admin/dashboard', label: 'Dashboard', icon: 'bi-grid' },
-    { href: '/admin/cities', label: 'Cities', icon: 'bi-geo-alt' },
-    { href: '/admin/categories', label: 'Categories', icon: 'bi-collection' },
-    { href: '/admin/plans', label: 'Plans', icon: 'bi-card-checklist' },
-    { href: '/admin/reels', label: 'Reels', icon: 'bi-play-btn' },
-    { href: '/admin/sliders', label: 'Sliders', icon: 'bi-images' },
-    { href: '/admin/bookings', label: 'Bookings', icon: 'bi-calendar2-check' },
-    { href: '/admin/booking-results', label: 'Results', icon: 'bi-images' },
-    { href: '/admin/payments', label: 'Payments', icon: 'bi-credit-card-2-front' },
-    { href: '/admin/users', label: 'Users', icon: 'bi-people' },
-    { href: '/admin/partners', label: 'Partners', icon: 'bi-camera-reels' },
-    { href: '/admin/partners/kyc/pending', label: 'Partner KYC', icon: 'bi-shield-check' },
-    { href: '/admin/owners', label: 'Owners', icon: 'bi-person-badge' },
-    { href: '/admin/notifications', label: 'Notifications', icon: 'bi-bell' },
-    { href: '/admin/reports', label: 'Reports', icon: 'bi-bar-chart' },
-    { href: '/admin/settings', label: 'Settings', icon: 'bi-gear' },
+const allNavLinks = [
+    { href: '/admin/dashboard', label: 'Dashboard', icon: 'bi-grid', superOnly: false, mainOnly: false },
+    { href: '/admin/staff', label: 'Staff', icon: 'bi-people-fill', superOnly: false, mainOnly: true },
+    { href: '/admin/cities', label: 'Cities', icon: 'bi-geo-alt', superOnly: true, mainOnly: false },
+    { href: '/admin/categories', label: 'Categories', icon: 'bi-collection', superOnly: true, mainOnly: false },
+    { href: '/admin/plans', label: 'Plans', icon: 'bi-card-checklist', superOnly: true, mainOnly: false },
+    { href: '/admin/reels', label: 'Reels', icon: 'bi-play-btn', superOnly: true, mainOnly: false },
+    { href: '/admin/sliders', label: 'Sliders', icon: 'bi-images', superOnly: true, mainOnly: false },
+    { href: '/admin/bookings', label: 'Bookings', icon: 'bi-calendar2-check', superOnly: false, mainOnly: false },
+    { href: '/admin/booking-results', label: 'Results', icon: 'bi-images', superOnly: false, mainOnly: false },
+    { href: '/admin/payments', label: 'Payments', icon: 'bi-credit-card-2-front', superOnly: false, mainOnly: false },
+    { href: '/admin/users', label: 'Users', icon: 'bi-people', superOnly: false, mainOnly: false },
+    { href: '/admin/partners', label: 'Partners', icon: 'bi-camera-reels', superOnly: false, mainOnly: false },
+    { href: '/admin/partners/kyc/pending', label: 'Partner KYC', icon: 'bi-shield-check', superOnly: false, mainOnly: false },
+    { href: '/admin/owners', label: 'Owners', icon: 'bi-person-badge', superOnly: true, mainOnly: false },
+    { href: '/admin/notifications', label: 'Notifications', icon: 'bi-bell', superOnly: true, mainOnly: false },
+    { href: '/admin/reports', label: 'Reports', icon: 'bi-bar-chart', superOnly: false, mainOnly: false },
+    { href: '/admin/settings', label: 'Settings', icon: 'bi-gear', superOnly: true, mainOnly: false },
 ];
+
+const links = computed(() => {
+    const isSuper = admin.value?.is_super_admin !== false;
+    const isMain = admin.value?.is_main === true;
+    return allNavLinks.filter((link) => {
+        if (link.superOnly && !isSuper) {
+            return false;
+        }
+        if (link.mainOnly && !isMain) {
+            return false;
+        }
+        return true;
+    });
+});
 
 function isActive(href) {
     const url = currentUrl.value.split('?')[0] ?? '';
@@ -51,6 +66,10 @@ function isActive(href) {
             url === href ||
             (url.startsWith('/admin/partners/') && !url.startsWith('/admin/partners/kyc'))
         );
+    }
+
+    if (href === '/admin/staff') {
+        return url === href || url.startsWith('/admin/staff/');
     }
 
     return url === href || url.startsWith(`${href}/`);
@@ -70,7 +89,11 @@ function logout() {
                 <div class="brand-mark"><i class="bi bi-camera-fill"></i></div>
                 <div>
                     <div class="fw-bold">{{ appName }}</div>
-                    <div class="small text-white-50">Admin Console</div>
+                    <div class="small text-white-50">
+                        <template v-if="admin?.is_main === true">Main administrator</template>
+                        <template v-else-if="admin?.city_name">{{ admin.city_name }} · city admin</template>
+                        <template v-else>Platform admin</template>
+                    </div>
                 </div>
             </div>
 
@@ -111,7 +134,11 @@ function logout() {
 
                     <!-- Desktop toolbar -->
                     <div class="d-none d-lg-flex align-items-center gap-2 gap-xl-3 flex-shrink-0">
-                        <Link class="btn btn-outline-secondary btn-sm" href="/admin/notifications">
+                        <Link
+                            v-if="admin?.is_super_admin !== false"
+                            class="btn btn-outline-secondary btn-sm"
+                            href="/admin/notifications"
+                        >
                             <i class="bi bi-bell me-1"></i>Notifications
                         </Link>
                         <div class="d-flex align-items-center gap-2" v-if="admin">
@@ -129,6 +156,7 @@ function logout() {
                     <!-- Mobile / tablet: notifications + account menu -->
                     <div class="d-flex d-lg-none align-items-center gap-1 flex-shrink-0">
                         <Link
+                            v-if="admin?.is_super_admin !== false"
                             class="btn btn-light admin-topbar-icon-btn"
                             href="/admin/notifications"
                             aria-label="Notifications"

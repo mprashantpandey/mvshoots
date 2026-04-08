@@ -15,6 +15,7 @@ use App\Models\User;
 use App\Services\BookingService;
 use App\Services\MediaUploadService;
 use App\Services\PartnerAssignmentService;
+use App\Support\AdminCityScope;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -43,6 +44,11 @@ class BookingController extends Controller
             $query->where('user_id', $actor->id);
         } elseif ($actor instanceof Partner) {
             $query->where('assigned_partner_id', $actor->id);
+        } elseif ($actor instanceof Admin) {
+            AdminCityScope::bookings($query, $actor);
+            $query
+                ->when($request->filled('user_id'), fn ($builder) => $builder->where('user_id', $request->integer('user_id')))
+                ->when($request->filled('assigned_partner_id'), fn ($builder) => $builder->where('assigned_partner_id', $request->integer('assigned_partner_id')));
         } else {
             $query
                 ->when($request->filled('user_id'), fn ($builder) => $builder->where('user_id', $request->integer('user_id')))
@@ -99,6 +105,10 @@ class BookingController extends Controller
     {
         $actor = $this->requireActor($request, [Owner::class, Admin::class]);
 
+        if ($actor instanceof Admin) {
+            abort_unless(AdminCityScope::adminCanAccessBooking($actor, $booking), 403, 'You are not allowed to access this booking.');
+        }
+
         $data = $request->validate([
             'partner_id' => ['required', 'exists:partners,id'],
             'remarks' => ['nullable', 'string'],
@@ -115,6 +125,10 @@ class BookingController extends Controller
 
         if ($actor instanceof Partner && (int) $booking->assigned_partner_id !== (int) $actor->id) {
             abort(403, 'You can only update bookings assigned to you.');
+        }
+
+        if ($actor instanceof Admin) {
+            abort_unless(AdminCityScope::adminCanAccessBooking($actor, $booking), 403, 'You are not allowed to access this booking.');
         }
 
         $data = $request->validate([
@@ -184,7 +198,13 @@ class BookingController extends Controller
 
     private function authorizeBookingAccess(Booking $booking, User|Partner|Owner|Admin $actor): void
     {
-        if ($actor instanceof Owner || $actor instanceof Admin) {
+        if ($actor instanceof Owner) {
+            return;
+        }
+
+        if ($actor instanceof Admin) {
+            abort_unless(AdminCityScope::adminCanAccessBooking($actor, $booking), 403, 'You are not allowed to access this booking.');
+
             return;
         }
 
